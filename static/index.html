@@ -349,7 +349,12 @@
                     <tbody>
                       <template x-for="tx in transactions" :key="tx.transactionId">
                         <tr>
-                          <td class="text-nowrap" x-text="fmtDateShort(tx.postedTimestamp)"></td>
+                          <td class="text-nowrap">
+                            <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
+                            <template x-if="tx.status === 'PENDING'">
+                              <div style="font-size:11px;color:var(--muted)">authorized</div>
+                            </template>
+                          </td>
                           <td>
                             <div>
                               <span x-text="tx.payee || tx.description"></span>
