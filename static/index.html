@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SimpleFIN</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <style>
+    body { padding: 0; }
+
+    #layout { display: flex; min-height: 100vh; }
+
+    #sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--pico-muted-border-color);
+      padding: 1.5rem 1rem;
+      background: var(--pico-card-background-color);
+    }
+
+    #sidebar h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+
+    #status {
+      font-size: 0.75rem;
+      color: var(--pico-muted-color);
+      margin-bottom: 1.5rem;
+    }
+
+    #status.error { color: var(--pico-del-color); }
+
+    #account-list { list-style: none; padding: 0; margin: 0; }
+
+    #account-list li {
+      border-radius: var(--pico-border-radius);
+      margin-bottom: 0.25rem;
+    }
+
+    #account-list button {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--pico-border-radius);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      color: var(--pico-color);
+    }
+
+    #account-list button:hover { background: var(--pico-muted-background-color); }
+    #account-list button.active { background: var(--pico-primary-background); color: var(--pico-primary-inverse); }
+
+    .acct-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .acct-balance { font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+
+    #main {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      overflow: auto;
+    }
+
+    #main h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .balance-line { color: var(--pico-muted-color); margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+    .tab-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      padding-bottom: 0;
+    }
+
+    .tab-bar button {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0.4rem 0.75rem;
+      margin-bottom: -1px;
+      cursor: pointer;
+      color: var(--pico-muted-color);
+      font-size: 0.9rem;
+    }
+
+    .tab-bar button.active {
+      border-bottom-color: var(--pico-primary);
+      color: var(--pico-color);
+      font-weight: 600;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-bar label { font-size: 0.8rem; margin-bottom: 0; }
+    .filter-bar input[type="date"] { font-size: 0.85rem; padding: 0.35rem 0.5rem; margin-bottom: 0; width: auto; }
+    .filter-bar button { margin-bottom: 0; padding: 0.35rem 1rem; font-size: 0.85rem; }
+
+    table { font-size: 0.875rem; }
+    th { color: var(--pico-muted-color); font-weight: 600; }
+
+    .amount-debit { color: var(--pico-del-color); }
+    .amount-credit { color: var(--pico-ins-color); }
+    .badge-pending {
+      font-size: 0.7rem;
+      background: var(--pico-muted-background-color);
+      color: var(--pico-muted-color);
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
+    #empty { color: var(--pico-muted-color); text-align: center; padding: 3rem 0; }
+    #welcome { color: var(--pico-muted-color); text-align: center; padding: 4rem 0; }
+
+    @media (max-width: 640px) {
+      #layout { flex-direction: column; }
+      #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--pico-muted-border-color); }
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <nav id="sidebar">
+      <h2>SimpleFIN</h2>
+      <div id="status">Loading...</div>
+      <ul id="account-list"></ul>
+    </nav>
+    <main id="main">
+      <div id="welcome">Select an account to get started.</div>
+    </main>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let accounts = [];
+    let selectedId = null;
+    let activeTab = 'transactions';
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function fmt(amount, currency) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency ?? 'USD' }).format(amount);
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function fmtDateTime(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function escHtml(str) {
+      return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── API calls ──────────────────────────────────────────────────────────
+    async function apiFetch(path) {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return res.json();
+    }
+
+    // ── Status bar ─────────────────────────────────────────────────────────
+    async function refreshStatus() {
+      try {
+        const h = await apiFetch('/health');
+        const el = document.getElementById('status');
+        if (h.fetch_error) {
+          el.textContent = 'Fetch error: ' + h.fetch_error;
+          el.className = 'error';
+        } else if (h.last_fetched) {
+          const ago = Math.round((Date.now() / 1000 - h.last_fetched) / 60);
+          el.textContent = ago < 2 ? 'Updated just now' : `Updated ${ago}m ago`;
+          el.className = '';
+        } else {
+          el.textContent = 'Waiting for first fetch…';
+          el.className = '';
+        }
+      } catch {
+        document.getElementById('status').textContent = 'Server unreachable';
+      }
+    }
+
+    // ── Account list ───────────────────────────────────────────────────────
+    async function loadAccounts() {
+      try {
+        const data = await apiFetch('/fdx/v6/accounts');
+        accounts = data.accounts ?? [];
+        renderSidebar();
+        if (accounts.length > 0 && !selectedId) selectAccount(accounts[0].accountId);
+      } catch (e) {
+        document.getElementById('account-list').innerHTML =
+          `<li style="color:var(--pico-del-color);font-size:0.8rem">${escHtml(e.message)}</li>`;
+      }
+    }
+
+    function renderSidebar() {
+      const ul = document.getElementById('account-list');
+      ul.innerHTML = accounts.map(a => `
+        <li>
+          <button onclick="selectAccount('${escHtml(a.accountId)}')" class="${a.accountId === selectedId ? 'active' : ''}">
+            <span class="acct-name">${escHtml(a.displayName)}</span>
+            <span class="acct-balance">${fmt(a.currentBalance, a.currency?.currencyCode)}</span>
+          </button>
+        </li>`).join('');
+    }
+
+    function selectAccount(id) {
+      selectedId = id;
+      activeTab = 'transactions';
+      renderSidebar();
+      renderMain();
+    }
+
+    // ── Main panel ─────────────────────────────────────────────────────────
+    function renderMain() {
+      const acct = accounts.find(a => a.accountId === selectedId);
+      if (!acct) return;
+
+      const currency = acct.currency?.currencyCode ?? 'USD';
+      const main = document.getElementById('main');
+      main.innerHTML = `
+        <h1>${escHtml(acct.displayName)}</h1>
+        <div class="balance-line">
+          Balance: <strong>${fmt(acct.currentBalance, currency)}</strong>
+          ${acct.availableBalance != null ? ` &nbsp;·&nbsp; Available: <strong>${fmt(acct.availableBalance, currency)}</strong>` : ''}
+          &nbsp;·&nbsp; as of ${fmtDate(acct.balanceDate)}
+        </div>
+        <div class="tab-bar">
+          <button class="${activeTab === 'transactions' ? 'active' : ''}" onclick="switchTab('transactions')">Transactions</button>
+          <button class="${activeTab === 'holdings' ? 'active' : ''}" onclick="switchTab('holdings')">Holdings</button>
+        </div>
+        <div id="tab-content"></div>
+      `;
+
+      if (activeTab === 'transactions') loadTransactions(acct);
+      else loadHoldings(acct);
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      const acct = accounts.find(a => a.accountId === selectedId);
+      if (!acct) return;
+
+      // update tab button states
+      document.querySelectorAll('.tab-bar button').forEach(b => {
+        b.className = b.textContent.toLowerCase() === tab ? 'active' : '';
+      });
+
+      if (tab === 'transactions') loadTransactions(acct);
+      else loadHoldings(acct);
+    }
+
+    // ── Transactions ───────────────────────────────────────────────────────
+    function defaultDates() {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      return {
+        start: start.toISOString().slice(0, 10),
+        end: end.toISOString().slice(0, 10),
+      };
+    }
+
+    async function loadTransactions(acct, startDate, endDate) {
+      const { start, end } = { ...defaultDates(), ...(startDate ? { start: startDate } : {}), ...(endDate ? { end: endDate } : {}) };
+      const content = document.getElementById('tab-content');
+
+      content.innerHTML = `
+        <div class="filter-bar">
+          <label>From <input type="date" id="start-date" value="${start}" /></label>
+          <label>To <input type="date" id="end-date" value="${end}" /></label>
+          <button onclick="applyFilter()">Apply</button>
+        </div>
+        <div id="tx-table">Loading…</div>
+      `;
+
+      const startIso = start + 'T00:00:00Z';
+      const endIso = end + 'T23:59:59Z';
+      const url = `/fdx/v6/accounts/${encodeURIComponent(acct.accountId)}/transactions?startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}`;
+
+      try {
+        const data = await apiFetch(url);
+        const txs = data.transactions ?? [];
+        const currency = acct.currency?.currencyCode ?? 'USD';
+        const tableDiv = document.getElementById('tx-table');
+
+        if (txs.length === 0) {
+          tableDiv.innerHTML = '<div id="empty">No transactions in this date range.</div>';
+          return;
+        }
+
+        tableDiv.innerHTML = `
+          <figure style="overflow-x:auto;margin:0">
+          <table>
+            <thead><tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th style="text-align:right">Amount</th>
+            </tr></thead>
+            <tbody>
+              ${txs.map(tx => {
+                const isCredit = tx.debitCreditMemo === 'CREDIT';
+                const sign = isCredit ? '+' : '';
+                const cls = isCredit ? 'amount-credit' : 'amount-debit';
+                const pending = tx.status === 'PENDING' ? '<span class="badge-pending">pending</span>' : '';
+                const desc = tx.payee || tx.description;
+                const sub = tx.payee && tx.description !== tx.payee ? `<br><small style="color:var(--pico-muted-color)">${escHtml(tx.description)}</small>` : '';
+                return `<tr>
+                  <td style="white-space:nowrap">${fmtDateTime(tx.postedTimestamp)}</td>
+                  <td>${escHtml(desc)}${pending}${sub}</td>
+                  <td style="text-align:right" class="${cls}">${sign}${fmt(tx.amount, currency)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          </figure>
+        `;
+      } catch (e) {
+        document.getElementById('tx-table').innerHTML =
+          `<div style="color:var(--pico-del-color)">${escHtml(e.message)}</div>`;
+      }
+    }
+
+    function applyFilter() {
+      const acct = accounts.find(a => a.accountId === selectedId);
+      if (!acct) return;
+      const start = document.getElementById('start-date').value;
+      const end = document.getElementById('end-date').value;
+      loadTransactions(acct, start, end);
+    }
+
+    // ── Holdings ───────────────────────────────────────────────────────────
+    async function loadHoldings(acct) {
+      const content = document.getElementById('tab-content');
+      content.innerHTML = 'Loading…';
+
+      try {
+        const data = await apiFetch(`/fdx/v6/accounts/${encodeURIComponent(acct.accountId)}/holdings`);
+        const holdings = data.holdings ?? [];
+        const currency = acct.currency?.currencyCode ?? 'USD';
+
+        if (holdings.length === 0) {
+          content.innerHTML = '<div id="empty">No holdings for this account.</div>';
+          return;
+        }
+
+        content.innerHTML = `
+          <figure style="overflow-x:auto;margin:0">
+          <table>
+            <thead><tr>
+              <th>Symbol</th>
+              <th>Description</th>
+              <th style="text-align:right">Shares</th>
+              <th style="text-align:right">Market Value</th>
+              <th style="text-align:right">Cost Basis</th>
+            </tr></thead>
+            <tbody>
+              ${holdings.map(h => `<tr>
+                <td><strong>${escHtml(h.symbol ?? '—')}</strong></td>
+                <td>${escHtml(h.description ?? '—')}</td>
+                <td style="text-align:right">${h.units != null ? h.units.toFixed(4) : '—'}</td>
+                <td style="text-align:right">${h.marketValue != null ? fmt(h.marketValue, currency) : '—'}</td>
+                <td style="text-align:right">${h.costBasis != null ? fmt(h.costBasis, currency) : '—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+          </figure>
+        `;
+      } catch (e) {
+        content.innerHTML = `<div style="color:var(--pico-del-color)">${escHtml(e.message)}</div>`;
+      }
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    refreshStatus();
+    loadAccounts();
+    setInterval(refreshStatus, 60_000);
+  </script>
+</body>
+</html>

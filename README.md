@@ -86,9 +86,17 @@ services:
     restart: unless-stopped
 ```
 
+## Web UI
+
+A browser-based UI is served at `GET /`. It shows all accounts in a sidebar and lets you browse transactions (with a date range filter) and holdings for each account.
+
 ## API
 
 All responses are `application/json`. The full OpenAPI spec is available at `GET /openapi.json` and can be loaded into any compatible viewer (Swagger UI, Redoc, Stoplight, Postman).
+
+### `GET /`
+
+Returns the web UI (HTML). Open in a browser to explore accounts and transactions.
 
 ### `GET /health`
 

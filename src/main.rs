@@ -5,7 +5,7 @@ mod fdx;
 mod fetcher;
 mod state;
 
-use axum::{Json, Router, routing::get};
+use axum::{Json, Router, http::header, response::IntoResponse, routing::get};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use utoipa::OpenApi;
@@ -62,9 +62,18 @@ async fn main() -> anyhow::Result<()> {
         .route("/fdx/v6/accounts/{accountId}/holdings", get(list_holdings))
         .with_state(app_state);
 
+    async fn ui() -> impl IntoResponse {
+        (
+            [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+            include_str!("../static/index.html"),
+        )
+    }
+    let ui_route = Router::new().route("/", get(ui));
+
     let app = Router::new()
         .merge(api)
         .merge(openapi_route)
+        .merge(ui_route)
         .layer(TraceLayer::new_for_http());
 
     info!("Listening on {}", cfg.server_addr);
