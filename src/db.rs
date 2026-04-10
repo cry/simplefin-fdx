@@ -143,8 +143,8 @@ pub async fn get_transactions(
         r#"
         SELECT id, posted, amount, description, payee, memo, transacted_at, pending
         FROM transactions
-        WHERE account_id = ? AND posted >= ? AND posted <= ?
-        ORDER BY posted DESC
+        WHERE account_id = ? AND (pending = 1 OR (posted >= ? AND posted <= ?))
+        ORDER BY pending DESC, posted DESC
         "#,
     )
     .bind(account_id)
