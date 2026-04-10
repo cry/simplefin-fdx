@@ -1,6 +1,6 @@
 use axum::{
-    extract::{Path, Query, State},
     Json,
+    extract::{Path, Query, State},
 };
 use chrono::DateTime;
 use serde::Deserialize;
@@ -11,9 +11,11 @@ use crate::{
     db,
     error::AppError,
     fdx::{
-        mapping::{cached_account_to_fdx, holding_row_to_fdx, transaction_row_to_fdx, unix_to_rfc3339},
         ErrorResponse, FdxAccount, FdxAccountList, FdxHoldingList, FdxPage, FdxTransactionList,
         HealthResponse,
+        mapping::{
+            cached_account_to_fdx, holding_row_to_fdx, transaction_row_to_fdx, unix_to_rfc3339,
+        },
     },
     state::SharedState,
 };
@@ -67,9 +69,7 @@ pub struct ApiDoc;
     ),
     tag = "accounts"
 )]
-pub async fn list_accounts(
-    State(app): State<AppState>,
-) -> Result<Json<FdxAccountList>, AppError> {
+pub async fn list_accounts(State(app): State<AppState>) -> Result<Json<FdxAccountList>, AppError> {
     let state = app.shared.read().await;
     if state.accounts.is_empty() && state.last_fetched.is_none() {
         return Err(AppError::NotReady);
@@ -212,7 +212,11 @@ pub async fn list_holdings(
 pub async fn health(State(app): State<AppState>) -> Json<HealthResponse> {
     let state = app.shared.read().await;
     Json(HealthResponse {
-        status: if state.fetch_error.is_none() { "ok" } else { "degraded" },
+        status: if state.fetch_error.is_none() {
+            "ok"
+        } else {
+            "degraded"
+        },
         last_fetched: state.last_fetched.map(unix_to_rfc3339),
         fetch_error: state.fetch_error.clone(),
     })

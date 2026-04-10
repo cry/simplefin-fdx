@@ -21,8 +21,7 @@ impl Config {
                 .ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(3600),
-            server_addr: env::var("SERVER_ADDR")
-                .unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
+            server_addr: env::var("SERVER_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
             database_url: env::var("DATABASE_URL")
                 .unwrap_or_else(|_| "sqlite://simplefin.db".to_string()),
             start_date_days_back: env::var("START_DATE_DAYS_BACK")

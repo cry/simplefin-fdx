@@ -136,8 +136,11 @@ async fn do_fetch(
     }
 
     // Always reflect the latest account balances from SimpleFIN (same across all windows).
-    let cached_accounts: Vec<CachedAccount> =
-        account_set.accounts.iter().map(sfin_account_to_cached).collect();
+    let cached_accounts: Vec<CachedAccount> = account_set
+        .accounts
+        .iter()
+        .map(sfin_account_to_cached)
+        .collect();
     state.write().await.accounts = cached_accounts;
 
     Ok(())
@@ -224,7 +227,10 @@ pub async fn run(
         let elapsed = (now_unix() - ts).max(0) as u64;
         if elapsed < fetch_interval_secs {
             let wait = fetch_interval_secs - elapsed;
-            info!(wait_secs = wait, "Resuming after restart — waiting until next scheduled fetch");
+            info!(
+                wait_secs = wait,
+                "Resuming after restart — waiting until next scheduled fetch"
+            );
             sleep(Duration::from_secs(wait)).await;
         }
     }
@@ -248,7 +254,8 @@ pub async fn run(
                 if let Err(e) = db::set_config(&pool, LAST_FETCHED_KEY, &now.to_string()).await {
                     warn!("Failed to persist last_fetched: {e}");
                 }
-                if let Err(e) = db::set_config(&pool, NEXT_START_KEY, &next_start.to_string()).await {
+                if let Err(e) = db::set_config(&pool, NEXT_START_KEY, &next_start.to_string()).await
+                {
                     warn!("Failed to persist next_start: {e}");
                 }
             }

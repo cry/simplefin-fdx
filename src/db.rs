@@ -27,10 +27,7 @@ pub struct HoldingRow {
     pub symbol: Option<String>,
 }
 
-pub async fn upsert_account(
-    pool: &SqlitePool,
-    account: &CachedAccount,
-) -> Result<(), sqlx::Error> {
+pub async fn upsert_account(pool: &SqlitePool, account: &CachedAccount) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         INSERT INTO accounts

@@ -5,7 +5,7 @@ mod fdx;
 mod fetcher;
 mod state;
 
-use axum::{routing::get, Json, Router};
+use axum::{Json, Router, routing::get};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use utoipa::OpenApi;
@@ -49,14 +49,16 @@ async fn main() -> anyhow::Result<()> {
     // Serve the OpenAPI spec as a plain JSON endpoint. Point any OpenAPI viewer
     // (Swagger UI, Redoc, Stoplight, Postman) at /openapi.json to explore the API.
     let spec = ApiDoc::openapi();
-    let openapi_route = Router::new()
-        .route("/openapi.json", get(|| async move { Json(spec) }));
+    let openapi_route = Router::new().route("/openapi.json", get(|| async move { Json(spec) }));
 
     let api = Router::new()
         .route("/health", get(health))
         .route("/fdx/v6/accounts", get(list_accounts))
         .route("/fdx/v6/accounts/{accountId}", get(get_account))
-        .route("/fdx/v6/accounts/{accountId}/transactions", get(list_transactions))
+        .route(
+            "/fdx/v6/accounts/{accountId}/transactions",
+            get(list_transactions),
+        )
         .route("/fdx/v6/accounts/{accountId}/holdings", get(list_holdings))
         .with_state(app_state);
 

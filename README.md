@@ -32,6 +32,60 @@ On first run the server claims a persistent access URL from the setup token and 
 
 Fetch state (last poll time and next window start) is also persisted to the database, so restarting the server will not trigger an immediate re-fetch if one has occurred recently.
 
+## Docker
+
+### Build
+
+```bash
+docker build -t simplefin-server .
+```
+
+### Run
+
+The server stores its SQLite database at the path specified by `DATABASE_URL`. Mount a host directory so the database persists across container restarts:
+
+```bash
+mkdir -p /path/to/data
+
+docker run -d \
+  --name simplefin-server \
+  -p 8080:8080 \
+  -v /path/to/data:/data \
+  -e DATABASE_URL=sqlite:///data/simplefin.db \
+  -e SIMPLEFIN_SETUP_TOKEN=<your token> \
+  simplefin-server
+```
+
+After the first run the access URL is stored in the database. You can drop `SIMPLEFIN_SETUP_TOKEN` from subsequent runs:
+
+```bash
+docker run -d \
+  --name simplefin-server \
+  -p 8080:8080 \
+  -v /path/to/data:/data \
+  -e DATABASE_URL=sqlite:///data/simplefin.db \
+  simplefin-server
+```
+
+> **Note:** Use an absolute path for `DATABASE_URL` inside the container (`sqlite:///data/...` with three slashes). A relative path like `sqlite://simplefin.db` would write the database inside the container and lose it on restart.
+
+### Docker Compose
+
+```yaml
+services:
+  simplefin-server:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      DATABASE_URL: sqlite:///data/simplefin.db
+      SIMPLEFIN_SETUP_TOKEN: <your token>  # remove after first run
+      FETCH_INTERVAL_SECS: 3600
+    restart: unless-stopped
+```
+
 ## API
 
 All responses are `application/json`. The full OpenAPI spec is available at `GET /openapi.json` and can be loaded into any compatible viewer (Swagger UI, Redoc, Stoplight, Postman).

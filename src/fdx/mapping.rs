@@ -30,10 +30,7 @@ pub fn cached_account_to_fdx(account: &CachedAccount) -> FdxAccount {
             currency_code: account.currency.clone(),
         },
         current_balance: parse_amount(&account.balance),
-        available_balance: account
-            .available_balance
-            .as_deref()
-            .map(parse_amount),
+        available_balance: account.available_balance.as_deref().map(parse_amount),
         balance_date: unix_to_rfc3339(account.balance_date),
     }
 }
