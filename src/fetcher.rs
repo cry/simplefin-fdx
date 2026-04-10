@@ -82,7 +82,7 @@ async fn do_fetch(
     let params = AccountsRequest {
         start_date: Some(start_ts),
         end_date: Some(end_ts),
-        pending: false,
+        pending: true,
         accounts: vec![],
         balances_only: false,
     };
