@@ -4,388 +4,543 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SimpleFIN</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
   <style>
-    body { padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
 
-    #layout { display: flex; min-height: 100vh; }
-
-    #sidebar {
-      width: 260px;
-      flex-shrink: 0;
-      border-right: 1px solid var(--pico-muted-border-color);
-      padding: 1.5rem 1rem;
-      background: var(--pico-card-background-color);
+    :root {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #dee2e6;
+      --muted: #6c757d;
+      --text: #212529;
+      --primary: #0d6efd;
+      --primary-text: #ffffff;
+      --danger: #dc3545;
+      --success: #198754;
+      --hover: #f1f3f5;
+      --active-bg: #e7f1ff;
+      --active-text: #0a58ca;
+      --radius: 6px;
+      --font: system-ui, -apple-system, sans-serif;
     }
 
-    #sidebar h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    #layout {
+      display: flex;
+      height: 100%;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    #sidebar-header {
+      padding: 16px 14px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #sidebar-header h1 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 700;
+    }
 
     #status {
-      font-size: 0.75rem;
-      color: var(--pico-muted-color);
-      margin-bottom: 1.5rem;
+      font-size: 12px;
+      color: var(--muted);
     }
 
-    #status.error { color: var(--pico-del-color); }
+    #status.error { color: var(--danger); }
 
-    #account-list { list-style: none; padding: 0; margin: 0; }
-
-    #account-list li {
-      border-radius: var(--pico-border-radius);
-      margin-bottom: 0.25rem;
+    #account-list {
+      list-style: none;
+      margin: 0;
+      padding: 8px 6px;
     }
 
-    #account-list button {
+    #account-list li button {
       width: 100%;
-      text-align: left;
-      background: none;
-      border: none;
-      padding: 0.6rem 0.75rem;
-      border-radius: var(--pico-border-radius);
-      cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      gap: 0.5rem;
-      color: var(--pico-color);
+      gap: 8px;
+      padding: 8px 10px;
+      border: none;
+      background: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: left;
+      color: var(--text);
+      font-size: 14px;
     }
 
-    #account-list button:hover { background: var(--pico-muted-background-color); }
-    #account-list button.active { background: var(--pico-primary-background); color: var(--pico-primary-inverse); }
+    #account-list li button:hover { background: var(--hover); }
 
-    .acct-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .acct-balance { font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+    #account-list li button.active {
+      background: var(--active-bg);
+      color: var(--active-text);
+      font-weight: 600;
+    }
 
+    .acct-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .acct-bal {
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: var(--muted);
+    }
+
+    #account-list li button.active .acct-bal { color: var(--active-text); }
+
+    /* ── Main ── */
     #main {
       flex: 1;
-      padding: 1.5rem 2rem;
-      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    #main h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
-    .balance-line { color: var(--pico-muted-color); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    #main-header {
+      padding: 20px 24px 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    #main-header h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .balance-row {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .balance-row strong { color: var(--text); }
 
     .tab-bar {
       display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--pico-muted-border-color);
-      padding-bottom: 0;
+      gap: 2px;
+      margin-top: 4px;
     }
 
     .tab-bar button {
-      background: none;
+      padding: 8px 14px;
       border: none;
-      border-bottom: 2px solid transparent;
-      padding: 0.4rem 0.75rem;
-      margin-bottom: -1px;
+      background: none;
       cursor: pointer;
-      color: var(--pico-muted-color);
-      font-size: 0.9rem;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
     }
 
+    .tab-bar button:hover { color: var(--text); }
+
     .tab-bar button.active {
-      border-bottom-color: var(--pico-primary);
-      color: var(--pico-color);
+      color: var(--primary);
+      border-bottom-color: var(--primary);
       font-weight: 600;
+    }
+
+    /* ── Content ── */
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
     }
 
     .filter-bar {
       display: flex;
-      gap: 0.75rem;
-      align-items: flex-end;
-      margin-bottom: 1.25rem;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
     }
 
-    .filter-bar label { font-size: 0.8rem; margin-bottom: 0; }
-    .filter-bar input[type="date"] { font-size: 0.85rem; padding: 0.35rem 0.5rem; margin-bottom: 0; width: auto; }
-    .filter-bar button { margin-bottom: 0; padding: 0.35rem 1rem; font-size: 0.85rem; }
+    .filter-bar label {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-    table { font-size: 0.875rem; }
-    th { color: var(--pico-muted-color); font-weight: 600; }
+    .filter-bar input[type="date"] {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      font-size: 13px;
+      font-family: var(--font);
+      background: var(--surface);
+      color: var(--text);
+    }
 
-    .amount-debit { color: var(--pico-del-color); }
-    .amount-credit { color: var(--pico-ins-color); }
-    .badge-pending {
-      font-size: 0.7rem;
-      background: var(--pico-muted-background-color);
-      color: var(--pico-muted-color);
-      padding: 0.1rem 0.4rem;
-      border-radius: 999px;
-      margin-left: 0.4rem;
+    .filter-bar button {
+      padding: 5px 14px;
+      background: var(--primary);
+      color: var(--primary-text);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .filter-bar button:hover { opacity: 0.9; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:hover { background: var(--hover); }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
 
-    #empty { color: var(--pico-muted-color); text-align: center; padding: 3rem 0; }
-    #welcome { color: var(--pico-muted-color); text-align: center; padding: 4rem 0; }
+    .text-right { text-align: right; }
+    .text-nowrap { white-space: nowrap; }
 
-    @media (max-width: 640px) {
-      #layout { flex-direction: column; }
-      #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--pico-muted-border-color); }
+    .debit { color: var(--danger); }
+    .credit { color: var(--success); }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: var(--hover);
+      color: var(--muted);
+      margin-left: 6px;
+      vertical-align: middle;
     }
+
+    .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .placeholder {
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 0;
+    }
+
+    .error-msg { color: var(--danger); padding: 16px 0; }
   </style>
 </head>
-<body>
+<body x-data="app()" x-init="init()">
   <div id="layout">
-    <nav id="sidebar">
-      <h2>SimpleFIN</h2>
-      <div id="status">Loading...</div>
-      <ul id="account-list"></ul>
-    </nav>
-    <main id="main">
-      <div id="welcome">Select an account to get started.</div>
-    </main>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <h1>SimpleFIN</h1>
+        <div id="status" :class="{ error: statusError }" x-text="status"></div>
+      </div>
+      <ul id="account-list">
+        <template x-if="accounts.length === 0 && !accountsError">
+          <li><div class="placeholder" style="padding:24px 10px;font-size:13px">Loading…</div></li>
+        </template>
+        <template x-if="accountsError">
+          <li><div class="error-msg" style="padding:12px 10px" x-text="accountsError"></div></li>
+        </template>
+        <template x-for="acct in accounts" :key="acct.accountId">
+          <li>
+            <button @click="selectAccount(acct)" :class="{ active: selected?.accountId === acct.accountId }">
+              <span class="acct-name" x-text="acct.displayName"></span>
+              <span class="acct-bal" x-text="fmt(acct.currentBalance, acct.currency?.currencyCode)"></span>
+            </button>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <!-- Main panel -->
+    <div id="main">
+      <template x-if="!selected">
+        <div class="placeholder" style="margin-top:80px">Select an account to get started.</div>
+      </template>
+
+      <template x-if="selected">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <!-- Header -->
+          <div id="main-header">
+            <h2 x-text="selected.displayName"></h2>
+            <div class="balance-row">
+              Balance: <strong x-text="fmt(selected.currentBalance, selected.currency?.currencyCode)"></strong>
+              <template x-if="selected.availableBalance != null">
+                <span> &nbsp;·&nbsp; Available: <strong x-text="fmt(selected.availableBalance, selected.currency?.currencyCode)"></strong></span>
+              </template>
+              &nbsp;·&nbsp; as of <span x-text="fmtDate(selected.balanceDate)"></span>
+            </div>
+            <div class="tab-bar">
+              <button @click="switchTab('transactions')" :class="{ active: tab === 'transactions' }">Transactions</button>
+              <button @click="switchTab('holdings')" :class="{ active: tab === 'holdings' }">Holdings</button>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div id="content">
+
+            <!-- Transactions tab -->
+            <template x-if="tab === 'transactions'">
+              <div>
+                <div class="filter-bar">
+                  <label>From <input type="date" x-model="startDate" /></label>
+                  <label>To <input type="date" x-model="endDate" /></label>
+                  <button @click="loadTransactions()">Apply</button>
+                </div>
+
+                <template x-if="txLoading">
+                  <div class="placeholder">Loading…</div>
+                </template>
+                <template x-if="txError">
+                  <div class="error-msg" x-text="txError"></div>
+                </template>
+                <template x-if="!txLoading && !txError && transactions.length === 0">
+                  <div class="placeholder">No transactions in this date range.</div>
+                </template>
+                <template x-if="!txLoading && !txError && transactions.length > 0">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th class="text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="tx in transactions" :key="tx.transactionId">
+                        <tr>
+                          <td class="text-nowrap" x-text="fmtDateShort(tx.postedTimestamp)"></td>
+                          <td>
+                            <div>
+                              <span x-text="tx.payee || tx.description"></span>
+                              <template x-if="tx.status === 'PENDING'">
+                                <span class="badge">pending</span>
+                              </template>
+                            </div>
+                            <template x-if="tx.payee && tx.description !== tx.payee">
+                              <div class="sub" x-text="tx.description"></div>
+                            </template>
+                          </td>
+                          <td class="text-right text-nowrap"
+                              :class="tx.debitCreditMemo === 'CREDIT' ? 'credit' : 'debit'"
+                              x-text="(tx.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(tx.amount, selected.currency?.currencyCode)">
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </template>
+              </div>
+            </template>
+
+            <!-- Holdings tab -->
+            <template x-if="tab === 'holdings'">
+              <div>
+                <template x-if="holdingsLoading">
+                  <div class="placeholder">Loading…</div>
+                </template>
+                <template x-if="holdingsError">
+                  <div class="error-msg" x-text="holdingsError"></div>
+                </template>
+                <template x-if="!holdingsLoading && !holdingsError && holdings.length === 0">
+                  <div class="placeholder">No holdings for this account.</div>
+                </template>
+                <template x-if="!holdingsLoading && !holdingsError && holdings.length > 0">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Description</th>
+                        <th class="text-right">Shares</th>
+                        <th class="text-right">Market Value</th>
+                        <th class="text-right">Cost Basis</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="h in holdings" :key="h.holdingId">
+                        <tr>
+                          <td><strong x-text="h.symbol ?? '—'"></strong></td>
+                          <td x-text="h.description ?? '—'"></td>
+                          <td class="text-right text-nowrap" x-text="h.units != null ? h.units.toFixed(4) : '—'"></td>
+                          <td class="text-right text-nowrap" x-text="h.marketValue != null ? fmt(h.marketValue, selected.currency?.currencyCode) : '—'"></td>
+                          <td class="text-right text-nowrap" x-text="h.costBasis != null ? fmt(h.costBasis, selected.currency?.currencyCode) : '—'"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </template>
+              </div>
+            </template>
+
+          </div>
+        </div>
+      </template>
+    </div>
   </div>
 
   <script>
-    // ── State ──────────────────────────────────────────────────────────────
-    let accounts = [];
-    let selectedId = null;
-    let activeTab = 'transactions';
-
-    // ── Helpers ────────────────────────────────────────────────────────────
-    function fmt(amount, currency) {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency ?? 'USD' }).format(amount);
-    }
-
-    function fmtDate(iso) {
-      if (!iso) return '—';
-      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function fmtDateTime(iso) {
-      if (!iso) return '—';
-      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-
-    function escHtml(str) {
-      return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    // ── API calls ──────────────────────────────────────────────────────────
-    async function apiFetch(path) {
-      const res = await fetch(path);
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return res.json();
-    }
-
-    // ── Status bar ─────────────────────────────────────────────────────────
-    async function refreshStatus() {
-      try {
-        const h = await apiFetch('/health');
-        const el = document.getElementById('status');
-        if (h.fetch_error) {
-          el.textContent = 'Fetch error: ' + h.fetch_error;
-          el.className = 'error';
-        } else if (h.last_fetched) {
-          const ago = Math.round((Date.now() / 1000 - h.last_fetched) / 60);
-          el.textContent = ago < 2 ? 'Updated just now' : `Updated ${ago}m ago`;
-          el.className = '';
-        } else {
-          el.textContent = 'Waiting for first fetch…';
-          el.className = '';
-        }
-      } catch {
-        document.getElementById('status').textContent = 'Server unreachable';
-      }
-    }
-
-    // ── Account list ───────────────────────────────────────────────────────
-    async function loadAccounts() {
-      try {
-        const data = await apiFetch('/fdx/v6/accounts');
-        accounts = data.accounts ?? [];
-        renderSidebar();
-        if (accounts.length > 0 && !selectedId) selectAccount(accounts[0].accountId);
-      } catch (e) {
-        document.getElementById('account-list').innerHTML =
-          `<li style="color:var(--pico-del-color);font-size:0.8rem">${escHtml(e.message)}</li>`;
-      }
-    }
-
-    function renderSidebar() {
-      const ul = document.getElementById('account-list');
-      ul.innerHTML = accounts.map(a => `
-        <li>
-          <button onclick="selectAccount('${escHtml(a.accountId)}')" class="${a.accountId === selectedId ? 'active' : ''}">
-            <span class="acct-name">${escHtml(a.displayName)}</span>
-            <span class="acct-balance">${fmt(a.currentBalance, a.currency?.currencyCode)}</span>
-          </button>
-        </li>`).join('');
-    }
-
-    function selectAccount(id) {
-      selectedId = id;
-      activeTab = 'transactions';
-      renderSidebar();
-      renderMain();
-    }
-
-    // ── Main panel ─────────────────────────────────────────────────────────
-    function renderMain() {
-      const acct = accounts.find(a => a.accountId === selectedId);
-      if (!acct) return;
-
-      const currency = acct.currency?.currencyCode ?? 'USD';
-      const main = document.getElementById('main');
-      main.innerHTML = `
-        <h1>${escHtml(acct.displayName)}</h1>
-        <div class="balance-line">
-          Balance: <strong>${fmt(acct.currentBalance, currency)}</strong>
-          ${acct.availableBalance != null ? ` &nbsp;·&nbsp; Available: <strong>${fmt(acct.availableBalance, currency)}</strong>` : ''}
-          &nbsp;·&nbsp; as of ${fmtDate(acct.balanceDate)}
-        </div>
-        <div class="tab-bar">
-          <button class="${activeTab === 'transactions' ? 'active' : ''}" onclick="switchTab('transactions')">Transactions</button>
-          <button class="${activeTab === 'holdings' ? 'active' : ''}" onclick="switchTab('holdings')">Holdings</button>
-        </div>
-        <div id="tab-content"></div>
-      `;
-
-      if (activeTab === 'transactions') loadTransactions(acct);
-      else loadHoldings(acct);
-    }
-
-    function switchTab(tab) {
-      activeTab = tab;
-      const acct = accounts.find(a => a.accountId === selectedId);
-      if (!acct) return;
-
-      // update tab button states
-      document.querySelectorAll('.tab-bar button').forEach(b => {
-        b.className = b.textContent.toLowerCase() === tab ? 'active' : '';
-      });
-
-      if (tab === 'transactions') loadTransactions(acct);
-      else loadHoldings(acct);
-    }
-
-    // ── Transactions ───────────────────────────────────────────────────────
-    function defaultDates() {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 30);
+    function app() {
       return {
-        start: start.toISOString().slice(0, 10),
-        end: end.toISOString().slice(0, 10),
+        accounts: [],
+        accountsError: null,
+        selected: null,
+        tab: 'transactions',
+        transactions: [],
+        txLoading: false,
+        txError: null,
+        holdings: [],
+        holdingsLoading: false,
+        holdingsError: null,
+        status: 'Loading…',
+        statusError: false,
+        startDate: '',
+        endDate: '',
+
+        init() {
+          const end = new Date();
+          const start = new Date();
+          start.setDate(start.getDate() - 30);
+          this.endDate = end.toISOString().slice(0, 10);
+          this.startDate = start.toISOString().slice(0, 10);
+          this.refreshStatus();
+          this.loadAccounts();
+          setInterval(() => this.refreshStatus(), 60_000);
+        },
+
+        async refreshStatus() {
+          try {
+            const h = await fetch('/health').then(r => r.json());
+            if (h.fetchError) {
+              this.status = 'Fetch error: ' + h.fetchError;
+              this.statusError = true;
+            } else if (h.lastFetched) {
+              const ago = Math.round((Date.now() / 1000 - new Date(h.lastFetched).getTime() / 1000) / 60);
+              this.status = ago < 2 ? 'Updated just now' : `Updated ${ago}m ago`;
+              this.statusError = false;
+            } else {
+              this.status = 'Waiting for first fetch…';
+              this.statusError = false;
+            }
+          } catch {
+            this.status = 'Server unreachable';
+            this.statusError = true;
+          }
+        },
+
+        async loadAccounts() {
+          try {
+            const d = await fetch('/fdx/v6/accounts').then(r => r.json());
+            this.accounts = d.accounts ?? [];
+            if (this.accounts.length > 0) this.selectAccount(this.accounts[0]);
+          } catch (e) {
+            this.accountsError = e.message;
+          }
+        },
+
+        async selectAccount(acct) {
+          this.selected = acct;
+          this.tab = 'transactions';
+          await this.loadTransactions();
+        },
+
+        async switchTab(tab) {
+          this.tab = tab;
+          if (tab === 'transactions') await this.loadTransactions();
+          else await this.loadHoldings();
+        },
+
+        async loadTransactions() {
+          if (!this.selected) return;
+          this.txLoading = true;
+          this.txError = null;
+          this.transactions = [];
+          try {
+            const startIso = this.startDate + 'T00:00:00Z';
+            const endIso = this.endDate + 'T23:59:59Z';
+            const url = `/fdx/v6/accounts/${encodeURIComponent(this.selected.accountId)}/transactions`
+              + `?startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}`;
+            const d = await fetch(url).then(r => r.json());
+            this.transactions = d.transactions ?? [];
+          } catch (e) {
+            this.txError = e.message;
+          } finally {
+            this.txLoading = false;
+          }
+        },
+
+        async loadHoldings() {
+          if (!this.selected) return;
+          this.holdingsLoading = true;
+          this.holdingsError = null;
+          this.holdings = [];
+          try {
+            const d = await fetch(`/fdx/v6/accounts/${encodeURIComponent(this.selected.accountId)}/holdings`).then(r => r.json());
+            this.holdings = d.holdings ?? [];
+          } catch (e) {
+            this.holdingsError = e.message;
+          } finally {
+            this.holdingsLoading = false;
+          }
+        },
+
+        fmt(amount, currency) {
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency ?? 'USD',
+          }).format(amount);
+        },
+
+        fmtDate(iso) {
+          if (!iso) return '—';
+          return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        },
+
+        fmtDateShort(iso) {
+          if (!iso) return '—';
+          return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        },
       };
     }
-
-    async function loadTransactions(acct, startDate, endDate) {
-      const { start, end } = { ...defaultDates(), ...(startDate ? { start: startDate } : {}), ...(endDate ? { end: endDate } : {}) };
-      const content = document.getElementById('tab-content');
-
-      content.innerHTML = `
-        <div class="filter-bar">
-          <label>From <input type="date" id="start-date" value="${start}" /></label>
-          <label>To <input type="date" id="end-date" value="${end}" /></label>
-          <button onclick="applyFilter()">Apply</button>
-        </div>
-        <div id="tx-table">Loading…</div>
-      `;
-
-      const startIso = start + 'T00:00:00Z';
-      const endIso = end + 'T23:59:59Z';
-      const url = `/fdx/v6/accounts/${encodeURIComponent(acct.accountId)}/transactions?startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}`;
-
-      try {
-        const data = await apiFetch(url);
-        const txs = data.transactions ?? [];
-        const currency = acct.currency?.currencyCode ?? 'USD';
-        const tableDiv = document.getElementById('tx-table');
-
-        if (txs.length === 0) {
-          tableDiv.innerHTML = '<div id="empty">No transactions in this date range.</div>';
-          return;
-        }
-
-        tableDiv.innerHTML = `
-          <figure style="overflow-x:auto;margin:0">
-          <table>
-            <thead><tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th style="text-align:right">Amount</th>
-            </tr></thead>
-            <tbody>
-              ${txs.map(tx => {
-                const isCredit = tx.debitCreditMemo === 'CREDIT';
-                const sign = isCredit ? '+' : '';
-                const cls = isCredit ? 'amount-credit' : 'amount-debit';
-                const pending = tx.status === 'PENDING' ? '<span class="badge-pending">pending</span>' : '';
-                const desc = tx.payee || tx.description;
-                const sub = tx.payee && tx.description !== tx.payee ? `<br><small style="color:var(--pico-muted-color)">${escHtml(tx.description)}</small>` : '';
-                return `<tr>
-                  <td style="white-space:nowrap">${fmtDateTime(tx.postedTimestamp)}</td>
-                  <td>${escHtml(desc)}${pending}${sub}</td>
-                  <td style="text-align:right" class="${cls}">${sign}${fmt(tx.amount, currency)}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-          </figure>
-        `;
-      } catch (e) {
-        document.getElementById('tx-table').innerHTML =
-          `<div style="color:var(--pico-del-color)">${escHtml(e.message)}</div>`;
-      }
-    }
-
-    function applyFilter() {
-      const acct = accounts.find(a => a.accountId === selectedId);
-      if (!acct) return;
-      const start = document.getElementById('start-date').value;
-      const end = document.getElementById('end-date').value;
-      loadTransactions(acct, start, end);
-    }
-
-    // ── Holdings ───────────────────────────────────────────────────────────
-    async function loadHoldings(acct) {
-      const content = document.getElementById('tab-content');
-      content.innerHTML = 'Loading…';
-
-      try {
-        const data = await apiFetch(`/fdx/v6/accounts/${encodeURIComponent(acct.accountId)}/holdings`);
-        const holdings = data.holdings ?? [];
-        const currency = acct.currency?.currencyCode ?? 'USD';
-
-        if (holdings.length === 0) {
-          content.innerHTML = '<div id="empty">No holdings for this account.</div>';
-          return;
-        }
-
-        content.innerHTML = `
-          <figure style="overflow-x:auto;margin:0">
-          <table>
-            <thead><tr>
-              <th>Symbol</th>
-              <th>Description</th>
-              <th style="text-align:right">Shares</th>
-              <th style="text-align:right">Market Value</th>
-              <th style="text-align:right">Cost Basis</th>
-            </tr></thead>
-            <tbody>
-              ${holdings.map(h => `<tr>
-                <td><strong>${escHtml(h.symbol ?? '—')}</strong></td>
-                <td>${escHtml(h.description ?? '—')}</td>
-                <td style="text-align:right">${h.units != null ? h.units.toFixed(4) : '—'}</td>
-                <td style="text-align:right">${h.marketValue != null ? fmt(h.marketValue, currency) : '—'}</td>
-                <td style="text-align:right">${h.costBasis != null ? fmt(h.costBasis, currency) : '—'}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-          </figure>
-        `;
-      } catch (e) {
-        content.innerHTML = `<div style="color:var(--pico-del-color)">${escHtml(e.message)}</div>`;
-      }
-    }
-
-    // ── Init ───────────────────────────────────────────────────────────────
-    refreshStatus();
-    loadAccounts();
-    setInterval(refreshStatus, 60_000);
   </script>
 </body>
 </html>
