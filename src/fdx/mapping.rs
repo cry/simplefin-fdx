@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
+use tracing::warn;
 
 use crate::{
     db::{HoldingRow, TransactionRow},
@@ -26,11 +27,19 @@ fn date_to_rfc3339(date: &str) -> String {
 }
 
 fn parse_amount(s: &str) -> f64 {
-    s.parse().unwrap_or(0.0)
+    s.parse().unwrap_or_else(|_| {
+        warn!(value = s, "Failed to parse amount string, defaulting to 0.0");
+        0.0
+    })
 }
 
 fn parse_amount_opt(s: Option<&str>) -> Option<f64> {
-    s.map(|v| v.parse().unwrap_or(0.0))
+    s.map(|v| {
+        v.parse().unwrap_or_else(|_| {
+            warn!(value = v, "Failed to parse optional amount string, defaulting to 0.0");
+            0.0
+        })
+    })
 }
 
 /// Map a SimpleFIN cached account to an FDX account. `prefix` is applied to

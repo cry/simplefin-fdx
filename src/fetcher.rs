@@ -1,12 +1,13 @@
 use simplefin::client::{AccountsRequest, SimpleFINClient};
 use sqlx::SqlitePool;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 use crate::{
     db,
     state::{CachedAccount, SharedState},
+    util,
 };
 
 const ACCESS_URL_KEY: &str = "access_url";
@@ -14,13 +15,6 @@ const LAST_FETCHED_KEY: &str = "last_fetched";
 const NEXT_START_KEY: &str = "next_start";
 /// SimpleFIN bridges may reject or return incomplete data for windows longer than 90 days.
 const MAX_WINDOW_SECS: i64 = 90 * 86_400;
-
-fn now_unix() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
-}
 
 /// Split `[start, end)` into a sequence of non-overlapping windows each ≤ 90 days.
 fn batch_windows(start: i64, end: i64) -> Vec<(i64, i64)> {
@@ -214,7 +208,7 @@ pub async fn run(
         .ok()
         .flatten()
         .and_then(|s| s.parse().ok())
-        .unwrap_or_else(|| now_unix() - (start_date_days_back as i64 * 86_400));
+        .unwrap_or_else(|| util::now_unix() - (start_date_days_back as i64 * 86_400));
 
     // Restore last_fetched into the shared cache so /health is accurate immediately.
     if let Some(ts) = last_fetched {
@@ -224,7 +218,7 @@ pub async fn run(
     // If the server restarted before the next scheduled fetch, wait out the remainder
     // of the interval rather than fetching immediately.
     if let Some(ts) = last_fetched {
-        let elapsed = (now_unix() - ts).max(0) as u64;
+        let elapsed = (util::now_unix() - ts).max(0) as u64;
         if elapsed < fetch_interval_secs {
             let wait = fetch_interval_secs - elapsed;
             info!(
@@ -236,7 +230,7 @@ pub async fn run(
     }
 
     loop {
-        let now = now_unix();
+        let now = util::now_unix();
         info!(start = next_start, end = now, "Starting fetch cycle");
 
         match fetch_range(&client, &pool, &state, next_start, now).await {

@@ -6,12 +6,12 @@ use axum::{
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
-use std::time::{SystemTime, UNIX_EPOCH};
 use utoipa::{IntoParams, OpenApi};
 
 use crate::{
     db,
     error::AppError,
+    util,
     fdx::{
         ErrorResponse, FdxAccount, FdxAccountList, FdxHoldingList, FdxPage, FdxTransactionList,
         HealthResponse,
@@ -243,37 +243,37 @@ pub async fn get_account(
                 .find(|a| a.id == sfin_id)
                 .ok_or(AppError::AccountNotFound)?;
             let mut rec = cached_account_to_fdx(account, "REC-");
-            // Look up the matched LF account id and apply name preference.
-            if let Some(lf_id) = sqlx::query(
-                "SELECT lf_account_id FROM reconciled_accounts \
-                 WHERE sfin_account_id = ? AND status = 'matched' LIMIT 1",
+
+            // Fetch matched lf_account_id, lf name, and name preference in one query.
+            let row = sqlx::query(
+                "SELECT ra.lf_account_id, lfa.name AS lf_name, \
+                        COALESCE(np.preferred_source, 'simplefin') AS preferred_source \
+                 FROM reconciled_accounts ra \
+                 LEFT JOIN lf_accounts lfa ON lfa.id = ra.lf_account_id \
+                 LEFT JOIN user_account_name_preference np \
+                        ON np.sfin_account_id = ra.sfin_account_id \
+                 WHERE ra.sfin_account_id = ? AND ra.status = 'matched' \
+                 LIMIT 1",
             )
             .bind(&sfin_id)
             .fetch_optional(&app.pool)
             .await
             .ok()
-            .flatten()
-            .and_then(|r| r.get::<Option<i64>, _>("lf_account_id"))
-            {
-                rec.simplefin_account_id = Some(format!("SIMPLEFIN-{sfin_id}"));
-                rec.lunchflow_account_id = Some(format!("LUNCHFLOW-{lf_id}"));
-                // Apply name preference if set to lunchflow.
-                let prefers_lf = sqlx::query(
-                    "SELECT 1 FROM user_account_name_preference \
-                     WHERE sfin_account_id = ? AND preferred_source = 'lunchflow'",
-                )
-                .bind(&sfin_id)
-                .fetch_optional(&app.pool)
-                .await
-                .ok()
-                .flatten()
-                .is_some();
-                if prefers_lf {
-                    if let Ok(Some(lf)) = get_lf_account(&app.pool, lf_id).await {
-                        rec.display_name = lf.name;
+            .flatten();
+
+            if let Some(r) = row {
+                if let Some(lf_id) = r.get::<Option<i64>, _>("lf_account_id") {
+                    rec.simplefin_account_id = Some(format!("SIMPLEFIN-{sfin_id}"));
+                    rec.lunchflow_account_id = Some(format!("LUNCHFLOW-{lf_id}"));
+                    let preferred: String = r.get("preferred_source");
+                    if preferred == "lunchflow" {
+                        if let Some(lf_name) = r.get::<Option<String>, _>("lf_name") {
+                            rec.display_name = lf_name;
+                        }
                     }
                 }
             }
+
             Ok(Json(rec))
         }
     }
@@ -464,13 +464,6 @@ pub async fn health(State(app): State<AppState>) -> Json<HealthResponse> {
 // Reconciliation management API
 // ---------------------------------------------------------------------------
 
-fn now_unix() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
-}
-
 pub async fn list_account_matches(
     State(app): State<AppState>,
 ) -> Result<Json<Vec<AccountMatchRow>>, AppError> {
@@ -521,7 +514,7 @@ pub async fn create_reconciliation_rule(
         body.sfin_account_id.as_deref(),
         body.lf_account_id,
         &body.action,
-        now_unix(),
+        util::now_unix(),
     )
     .await?;
 

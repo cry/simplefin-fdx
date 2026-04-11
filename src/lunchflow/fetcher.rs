@@ -3,28 +3,14 @@ use lunchflow::{
     models::AccountStatus,
 };
 use sqlx::SqlitePool;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-use crate::{db, state::SharedState};
+use crate::{db, state::SharedState, util};
 use super::{db as lf_db, reconciler};
 
 const LF_LAST_FETCHED_KEY: &str = "lf_last_fetched";
-
-fn now_unix() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
-}
-
-/// Format a unix timestamp as a YYYY-MM-DD date string for LunchFlow params.
-fn unix_to_date(ts: i64) -> String {
-    let dt = chrono::DateTime::from_timestamp(ts, 0)
-        .unwrap_or_else(|| chrono::DateTime::from_timestamp(0, 0).unwrap());
-    dt.format("%Y-%m-%d").to_string()
-}
 
 /// Fetch all accounts, balances, transactions, and holdings from LunchFlow,
 /// then trigger reconciliation against the SimpleFIN data already in the DB.
@@ -36,8 +22,8 @@ async fn do_fetch(
 ) -> Result<(), String> {
     let accounts = client.list_accounts().await.map_err(|e| e.to_string())?;
 
-    let from_date = unix_to_date(from_ts);
-    let to_date = unix_to_date(now);
+    let from_date = util::unix_to_date_str(from_ts);
+    let to_date = util::unix_to_date_str(now);
 
     for account in &accounts {
         // Fetch balance separately and store alongside the account row.
@@ -136,11 +122,11 @@ pub async fn run(
 
     let mut from_ts: i64 = last_fetched
         .map(|ts| ts - 86_400) // 24 h overlap to catch late-arriving transactions
-        .unwrap_or_else(|| now_unix() - (start_date_days_back as i64 * 86_400));
+        .unwrap_or_else(|| util::now_unix() - (start_date_days_back as i64 * 86_400));
 
     // If we restarted before the next interval, wait out the remainder.
     if let Some(ts) = last_fetched {
-        let elapsed = (now_unix() - ts).max(0) as u64;
+        let elapsed = (util::now_unix() - ts).max(0) as u64;
         if elapsed < fetch_interval_secs {
             let wait = fetch_interval_secs - elapsed;
             info!(
@@ -152,7 +138,7 @@ pub async fn run(
     }
 
     loop {
-        let now = now_unix();
+        let now = util::now_unix();
         info!(from = from_ts, to = now, "LunchFlow fetch cycle starting");
 
         match do_fetch(&client, &pool, from_ts, now).await {

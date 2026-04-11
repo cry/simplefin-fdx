@@ -2,22 +2,15 @@ use lunchflow::models::{Account, Balance, Holding, Transaction};
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
 
-#[allow(dead_code)]
+use crate::util;
+
 pub struct LfTransactionRow {
     pub id: String,
-    pub lf_account_id: i64,
     pub amount: f64,
-    pub currency: String,
     pub date: String,
     pub merchant: Option<String>,
     pub description: Option<String>,
     pub is_pending: bool,
-}
-
-#[allow(dead_code)]
-pub struct LfAccountRow {
-    pub id: i64,
-    pub sfin_account_id: Option<String>,
 }
 
 /// Upsert a lunchflow account and its current balance.
@@ -198,18 +191,12 @@ pub async fn get_lf_transactions_raw(
     start_ts: Option<i64>,
     end_ts: Option<i64>,
 ) -> Result<Vec<LfTransactionRow>, sqlx::Error> {
-    let from = start_ts
-        .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-        .map(|dt| dt.format("%Y-%m-%d").to_string())
-        .unwrap_or_else(|| "0000-01-01".to_string());
-    let to = end_ts
-        .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-        .map(|dt| dt.format("%Y-%m-%d").to_string())
-        .unwrap_or_else(|| "9999-12-31".to_string());
+    let from = start_ts.map(util::unix_to_date_str).unwrap_or_else(|| "0000-01-01".to_string());
+    let to = end_ts.map(util::unix_to_date_str).unwrap_or_else(|| "9999-12-31".to_string());
 
     let rows = sqlx::query(
         r#"
-        SELECT id, lf_account_id, amount, currency, date, merchant, description, is_pending
+        SELECT id, amount, date, merchant, description, is_pending
         FROM lf_transactions
         WHERE lf_account_id = ?
           AND (is_pending = 1 OR (date >= ? AND date <= ?))
@@ -226,74 +213,7 @@ pub async fn get_lf_transactions_raw(
         .into_iter()
         .map(|r| LfTransactionRow {
             id: r.get("id"),
-            lf_account_id: r.get("lf_account_id"),
             amount: r.get("amount"),
-            currency: r.get("currency"),
-            date: r.get("date"),
-            merchant: r.get("merchant"),
-            description: r.get("description"),
-            is_pending: r.get::<i64, _>("is_pending") != 0,
-        })
-        .collect())
-}
-
-/// Load all lunchflow accounts with their linked SimpleFIN account id (if any).
-#[allow(dead_code)]
-pub async fn get_lf_accounts(pool: &SqlitePool) -> Result<Vec<LfAccountRow>, sqlx::Error> {
-    let rows = sqlx::query(
-        r#"
-        SELECT a.id, ra.sfin_account_id
-        FROM lf_accounts a
-        LEFT JOIN reconciled_accounts ra
-            ON ra.lf_account_id = a.id AND ra.status = 'matched'
-        "#,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|r| LfAccountRow {
-            id: r.get("id"),
-            sfin_account_id: r.get("sfin_account_id"),
-        })
-        .collect())
-}
-
-/// Load lunchflow transactions for a given account within an optional date range.
-#[allow(dead_code)]
-pub async fn get_lf_transactions(
-    pool: &SqlitePool,
-    lf_account_id: i64,
-    from_date: Option<&str>,
-    to_date: Option<&str>,
-) -> Result<Vec<LfTransactionRow>, sqlx::Error> {
-    use sqlx::Row;
-    let from = from_date.unwrap_or("0000-01-01");
-    let to = to_date.unwrap_or("9999-12-31");
-
-    let rows = sqlx::query(
-        r#"
-        SELECT id, lf_account_id, amount, currency, date, merchant, description, is_pending
-        FROM lf_transactions
-        WHERE lf_account_id = ?
-          AND (is_pending = 1 OR (date >= ? AND date <= ?))
-        ORDER BY is_pending DESC, date DESC
-        "#,
-    )
-    .bind(lf_account_id)
-    .bind(from)
-    .bind(to)
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|r| LfTransactionRow {
-            id: r.get("id"),
-            lf_account_id: r.get("lf_account_id"),
-            amount: r.get("amount"),
-            currency: r.get("currency"),
             date: r.get("date"),
             merchant: r.get("merchant"),
             description: r.get("description"),
@@ -361,14 +281,8 @@ pub async fn get_unified_transactions(
     let end = end_ts.unwrap_or(i64::MAX);
 
     // Derive YYYY-MM-DD bounds for the LunchFlow side.
-    let lf_from = start_ts
-        .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-        .map(|dt| dt.format("%Y-%m-%d").to_string())
-        .unwrap_or_else(|| "0000-01-01".to_string());
-    let lf_to = end_ts
-        .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-        .map(|dt| dt.format("%Y-%m-%d").to_string())
-        .unwrap_or_else(|| "9999-12-31".to_string());
+    let lf_from = start_ts.map(util::unix_to_date_str).unwrap_or_else(|| "0000-01-01".to_string());
+    let lf_to = end_ts.map(util::unix_to_date_str).unwrap_or_else(|| "9999-12-31".to_string());
 
     // Find the matched LunchFlow account for this SimpleFIN account (if any).
     let lf_account_id: Option<i64> = sqlx::query(
@@ -476,9 +390,7 @@ pub async fn get_unified_transactions(
 
         for r in lf_only_rows {
             let date: String = r.get("lf_date");
-            let sort_ts = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-                .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp())
-                .unwrap_or(0);
+            let sort_ts = util::date_str_to_unix(&date);
             results.push(UnifiedTransaction {
                 status: "lf_only".to_string(),
                 match_confidence: r.get("match_confidence"),

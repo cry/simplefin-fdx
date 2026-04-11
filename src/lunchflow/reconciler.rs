@@ -11,17 +11,9 @@
 /// writing results to `reconciled_transactions`.
 use sqlx::{Row, SqlitePool};
 use std::collections::{HashMap, HashSet};
-use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, info};
 
-use crate::lunchflow::db::{get_user_account_rules, UserReconciliationAction};
-
-fn now_unix() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
-}
+use crate::{lunchflow::db::{get_user_account_rules, UserReconciliationAction}, util};
 
 /// Confidence threshold above which two records are considered matched.
 const MATCH_THRESHOLD: f64 = 0.6;
@@ -48,14 +40,6 @@ struct LfAccount {
     id: i64,
     name: String,
     currency: Option<String>,
-}
-
-/// Parse a YYYY-MM-DD date string to a unix timestamp (midnight UTC).
-fn date_to_unix(date: &str) -> i64 {
-    chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
-        .map(|d| d.and_hms_opt(0, 0, 0).unwrap())
-        .map(|dt| dt.and_utc().timestamp())
-        .unwrap_or(0)
 }
 
 /// Normalised name similarity in [0.0, 1.0] using Levenshtein distance via
@@ -119,7 +103,7 @@ async fn score_accounts_by_transactions(
         .into_iter()
         .map(|r| {
             let date: String = r.get("date");
-            (date_to_unix(&date), r.get::<f64, _>("amount"))
+            (util::date_str_to_unix(&date), r.get::<f64, _>("amount"))
         })
         .collect();
 
@@ -490,7 +474,7 @@ async fn reconcile_transactions_for_pair(
         .into_iter()
         .map(|r| {
             let date: String = r.get("date");
-            let date_ts = date_to_unix(&date);
+            let date_ts = util::date_str_to_unix(&date);
             LfTxn {
                 id: r.get("id"),
                 date,
@@ -594,7 +578,7 @@ async fn upsert_reconciled_transaction(
 // ---------------------------------------------------------------------------
 
 pub async fn run(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    let now = now_unix();
+    let now = util::now_unix();
 
     reconcile_accounts(pool, now).await?;
 
