@@ -57,7 +57,7 @@ src/
     fetcher.rs     LunchFlow background task: poll LunchFlowClient, write lf_* tables,
                    update SharedState, trigger reconciler
     reconciler.rs  Phase 1: account matching by transaction overlap (last 20 txns, ≥60% match);
-                   Phase 2: transaction matching by amount + date ±2 days;
+                   Phase 2: transaction matching by amount + date ±5 days;
                    writes reconciled_accounts/reconciled_transactions
 migrations/
   0001_init.sql           config, accounts, transactions tables + index

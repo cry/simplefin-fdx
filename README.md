@@ -327,7 +327,7 @@ open https://editor.swagger.io/?url=http://localhost:8080/openapi.json
 When both SimpleFIN and LunchFlow are configured, the server reconciles accounts and transactions after each LunchFlow fetch:
 
 1. **Account matching** — pairs accounts from both sources by name similarity and currency. High-confidence matches become `REC-` accounts in the API.
-2. **Transaction matching** — for each matched account pair, links transactions with the same amount (within $0.01) and date (within ±2 days). Confidence is boosted further when merchant/description names overlap.
+2. **Transaction matching** — for each matched account pair, links transactions with the same amount (within $0.01) and date (within ±5 days). Confidence is boosted further when merchant/description names overlap.
 
 Unmatched transactions from either source are recorded as `sfin_only` or `lf_only` and appear in the `REC-` account's transaction list alongside matched ones.
 
