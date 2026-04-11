@@ -11,6 +11,8 @@ pub struct Config {
     pub database_url: String,
     /// Days of transaction history to fetch on the very first run.
     pub start_date_days_back: u64,
+    /// LunchFlow API key. If absent, the lunchflow fetcher is disabled.
+    pub lunchflow_api_key: Option<String>,
 }
 
 impl Config {
@@ -28,6 +30,7 @@ impl Config {
                 .ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(90),
+            lunchflow_api_key: env::var("LUNCHFLOW_API_KEY").ok(),
         }
     }
 }

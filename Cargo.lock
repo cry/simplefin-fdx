@@ -1044,6 +1044,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
+name = "lunchflow"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc67c4d5f2c04ff1794da21b7fd009d751541450d6f8bba07de385fbf17e7438"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1737,10 +1751,12 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
+ "lunchflow",
  "serde",
  "serde_json",
  "simplefin",
  "sqlx",
+ "strsim",
  "thiserror",
  "tokio",
  "tower-http",

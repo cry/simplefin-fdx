@@ -35,10 +35,7 @@
       background: var(--bg);
     }
 
-    #layout {
-      display: flex;
-      height: 100%;
-    }
+    #layout { display: flex; height: 100%; }
 
     /* ── Sidebar ── */
     #sidebar {
@@ -56,26 +53,29 @@
       border-bottom: 1px solid var(--border);
     }
 
-    #sidebar-header h1 {
-      margin: 0 0 4px;
-      font-size: 16px;
-      font-weight: 700;
-    }
+    #sidebar-header h1 { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
 
-    #status {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
+    #status { font-size: 12px; color: var(--muted); }
     #status.error { color: var(--danger); }
 
-    #account-list {
-      list-style: none;
-      margin: 0;
+    .sidebar-section {
       padding: 8px 6px;
     }
 
-    #account-list li button {
+    .sidebar-section + .sidebar-section {
+      border-top: 1px solid var(--border);
+    }
+
+    .sidebar-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 4px 10px 6px;
+    }
+
+    .sidebar-btn {
       width: 100%;
       display: flex;
       justify-content: space-between;
@@ -91,19 +91,15 @@
       font-size: 14px;
     }
 
-    #account-list li button:hover { background: var(--hover); }
+    .sidebar-btn:hover { background: var(--hover); }
 
-    #account-list li button.active {
+    .sidebar-btn.active {
       background: var(--active-bg);
       color: var(--active-text);
       font-weight: 600;
     }
 
-    .acct-name {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .acct-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .acct-bal {
       font-size: 12px;
@@ -112,41 +108,24 @@
       color: var(--muted);
     }
 
-    #account-list li button.active .acct-bal { color: var(--active-text); }
+    .sidebar-btn.active .acct-bal { color: var(--active-text); }
 
     /* ── Main ── */
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
     #main-header {
       padding: 20px 24px 0;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
+      flex-shrink: 0;
     }
 
-    #main-header h2 {
-      margin: 0 0 4px;
-      font-size: 18px;
-      font-weight: 700;
-    }
+    #main-header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
 
-    .balance-row {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 14px;
-    }
-
+    .balance-row { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
     .balance-row strong { color: var(--text); }
 
-    .tab-bar {
-      display: flex;
-      gap: 2px;
-      margin-top: 4px;
-    }
+    .tab-bar { display: flex; gap: 2px; margin-top: 4px; }
 
     .tab-bar button {
       padding: 8px 14px;
@@ -168,11 +147,7 @@
     }
 
     /* ── Content ── */
-    #content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 24px;
-    }
+    #content { flex: 1; overflow-y: auto; padding: 20px 24px; }
 
     .filter-bar {
       display: flex;
@@ -200,7 +175,7 @@
       color: var(--text);
     }
 
-    .filter-bar button {
+    .filter-bar button, .btn {
       padding: 5px 14px;
       background: var(--primary);
       color: var(--primary-text);
@@ -210,13 +185,16 @@
       font-size: 13px;
     }
 
-    .filter-bar button:hover { opacity: 0.9; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
+    .filter-bar button:hover, .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .btn-ghost {
+      background: none;
+      color: var(--primary);
+      border: 1px solid var(--border);
     }
+    .btn-ghost:hover { background: var(--hover); opacity: 1; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
     thead th {
       text-align: left;
@@ -256,13 +234,170 @@
 
     .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
-    .placeholder {
-      text-align: center;
+    .placeholder { text-align: center; color: var(--muted); padding: 60px 0; }
+    .error-msg { color: var(--danger); padding: 16px 0; }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      font-size: 13px;
       color: var(--muted);
-      padding: 60px 0;
     }
 
-    .error-msg { color: var(--danger); padding: 16px 0; }
+    /* ── Expandable reconciled transactions ── */
+    .tx-expandable { cursor: pointer; }
+    .tx-expandable:hover { background: var(--hover); }
+
+    .tx-expand-icon {
+      display: inline-block;
+      width: 14px;
+      font-size: 10px;
+      color: var(--muted);
+      margin-right: 2px;
+      transition: transform 0.15s;
+      vertical-align: middle;
+    }
+
+    .tx-source-row > td {
+      background: #f4f6ff;
+      padding: 8px 12px 8px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .source-txns {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .source-item {
+      display: grid;
+      grid-template-columns: 80px 80px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .source-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: var(--hover);
+      color: var(--muted);
+    }
+
+    .source-label.sfin { background: #dbeafe; color: #1d4ed8; }
+    .source-label.lf   { background: #dcfce7; color: #166534; }
+
+    .source-desc { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    /* ── Reconciliation management ── */
+    .recon-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-right: 16px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-badge.matched  { background: #dcfce7; color: #166534; }
+    .status-badge.sfin-only { background: #dbeafe; color: #1d4ed8; }
+    .status-badge.lf-only  { background: #fef9c3; color: #854d0e; }
+    .status-badge.user     { background: #f3e8ff; color: #6b21a8; }
+
+    .recon-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .recon-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .recon-form select, .recon-form input {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 8px;
+      font-size: 13px;
+      font-family: var(--font);
+      background: var(--surface);
+      color: var(--text);
+      min-width: 160px;
+    }
+
+    .inline-link-form {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .inline-link-form select {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 8px;
+      font-size: 12px;
+      font-family: var(--font);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+      background: var(--primary);
+      color: var(--primary-text);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .btn-sm:hover { opacity: 0.9; }
+
+    .btn-sm.danger {
+      background: var(--danger);
+    }
+
+    .btn-sm.ghost {
+      background: none;
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-sm.ghost:hover { background: var(--hover); opacity: 1; }
+
+    .confidence { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body x-data="app()" x-init="init()">
@@ -274,33 +409,180 @@
         <h1>SimpleFIN</h1>
         <div id="status" :class="{ error: statusError }" x-text="status"></div>
       </div>
-      <ul id="account-list">
-        <template x-if="accounts.length === 0 && !accountsError">
-          <li><div class="placeholder" style="padding:24px 10px;font-size:13px">Loading…</div></li>
+
+      <!-- Overview nav -->
+      <div class="sidebar-section">
+        <button class="sidebar-btn" :class="{ active: view === 'overview' }" @click="selectOverview()">
+          Overview
+        </button>
+        <template x-if="lunchflowPresent">
+          <button class="sidebar-btn" :class="{ active: view === 'reconciliation' }" @click="selectReconciliation()">
+            Reconciliation
+          </button>
         </template>
-        <template x-if="accountsError">
-          <li><div class="error-msg" style="padding:12px 10px" x-text="accountsError"></div></li>
-        </template>
-        <template x-for="acct in accounts" :key="acct.accountId">
-          <li>
-            <button @click="selectAccount(acct)" :class="{ active: selected?.accountId === acct.accountId }">
+      </div>
+
+      <!-- Account list -->
+      <template x-if="accounts.length === 0 && !accountsError">
+        <div class="sidebar-section">
+          <div class="placeholder" style="padding:16px 10px;font-size:13px">Loading…</div>
+        </div>
+      </template>
+      <template x-if="accountsError">
+        <div class="sidebar-section">
+          <div class="error-msg" style="padding:12px 10px" x-text="accountsError"></div>
+        </div>
+      </template>
+
+      <template x-if="reconAccounts.length > 0">
+        <div class="sidebar-section">
+          <div class="sidebar-label">Reconciled</div>
+          <template x-for="acct in reconAccounts" :key="acct.accountId">
+            <button class="sidebar-btn" :class="{ active: view === 'account' && selected?.accountId === acct.accountId }" @click="selectAccount(acct)">
               <span class="acct-name" x-text="acct.displayName"></span>
               <span class="acct-bal" x-text="fmt(acct.currentBalance, acct.currency?.currencyCode)"></span>
             </button>
-          </li>
-        </template>
-      </ul>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="sfinAccounts.length > 0">
+        <div class="sidebar-section">
+          <div class="sidebar-label">SimpleFIN</div>
+          <template x-for="acct in sfinAccounts" :key="acct.accountId">
+            <button class="sidebar-btn" :class="{ active: view === 'account' && selected?.accountId === acct.accountId }" @click="selectAccount(acct)">
+              <span class="acct-name" x-text="acct.displayName"></span>
+              <span class="acct-bal" x-text="fmt(acct.currentBalance, acct.currency?.currencyCode)"></span>
+            </button>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="lfAccounts.length > 0">
+        <div class="sidebar-section">
+          <div class="sidebar-label">LunchFlow</div>
+          <template x-for="acct in lfAccounts" :key="acct.accountId">
+            <button class="sidebar-btn" :class="{ active: view === 'account' && selected?.accountId === acct.accountId }" @click="selectAccount(acct)">
+              <span class="acct-name" x-text="acct.displayName"></span>
+              <span class="acct-bal" x-text="fmt(acct.currentBalance, acct.currency?.currencyCode)"></span>
+            </button>
+          </template>
+        </div>
+      </template>
     </div>
 
     <!-- Main panel -->
     <div id="main">
-      <template x-if="!selected">
-        <div class="placeholder" style="margin-top:80px">Select an account to get started.</div>
+
+      <!-- Overview -->
+      <template x-if="view === 'overview'">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div id="main-header">
+            <h2>Overview</h2>
+            <div class="balance-row"><span x-text="overviewSubtitle"></span></div>
+            <div class="tab-bar">
+              <button @click="setOverviewFilter('all')" :class="{ active: overviewFilter === 'all' }">All accounts</button>
+              <button @click="setOverviewFilter('reconciled')" :class="{ active: overviewFilter === 'reconciled' }">Reconciled only</button>
+            </div>
+          </div>
+          <div id="content">
+            <template x-if="overviewLoading">
+              <div class="placeholder">Loading…</div>
+            </template>
+            <template x-if="overviewError">
+              <div class="error-msg" x-text="overviewError"></div>
+            </template>
+            <template x-if="!overviewLoading && !overviewError && displayItems.length === 0">
+              <div class="placeholder">No transactions found.</div>
+            </template>
+            <template x-if="!overviewLoading && !overviewError && displayItems.length > 0">
+              <div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Account</th>
+                      <th>Description</th>
+                      <th class="text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <template x-for="tx in overviewPagedItems" :key="tx.transactionId">
+                    <tbody>
+                      <tr
+                        :class="{ 'tx-expandable': tx.reconciliationStatus === 'matched' }"
+                        @click="tx.reconciliationStatus === 'matched' && toggleExpand(tx.transactionId)"
+                      >
+                        <td class="text-nowrap">
+                          <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
+                          <template x-if="tx.status === 'PENDING'">
+                            <div style="font-size:11px;color:var(--muted)">authorized</div>
+                          </template>
+                        </td>
+                        <td class="text-nowrap" style="color:var(--muted)" x-text="tx._accountName"></td>
+                        <td>
+                          <div>
+                            <template x-if="tx.reconciliationStatus === 'matched'">
+                              <span class="tx-expand-icon" x-text="expandedTxns[tx.transactionId] ? '▼' : '▶'"></span>
+                            </template>
+                            <span x-text="tx.payee || tx.description"></span>
+                            <template x-if="tx.status === 'PENDING'">
+                              <span class="badge">pending</span>
+                            </template>
+                          </div>
+                          <template x-if="tx.payee && tx.description !== tx.payee">
+                            <div class="sub" x-text="tx.description"></div>
+                          </template>
+                        </td>
+                        <td class="text-right text-nowrap"
+                            :class="tx.debitCreditMemo === 'CREDIT' ? 'credit' : 'debit'"
+                            x-text="(tx.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(tx.amount, tx._currency)">
+                        </td>
+                      </tr>
+                      <tr x-show="expandedTxns[tx.transactionId]" class="tx-source-row">
+                        <td colspan="4">
+                          <div class="source-txns">
+                            <template x-if="tx.simplefinTransaction">
+                              <div class="source-item">
+                                <span class="source-label sfin">SimpleFIN</span>
+                                <span x-text="fmtDateShort(tx.simplefinTransaction.postedTimestamp)"></span>
+                                <span class="source-desc" x-text="tx.simplefinTransaction.payee || tx.simplefinTransaction.description || '—'"></span>
+                                <span class="source-amount" :class="tx.simplefinTransaction.amount < 0 ? 'debit' : 'credit'"
+                                  x-text="(tx.simplefinTransaction.amount >= 0 ? '+' : '') + fmt(tx.simplefinTransaction.amount, tx._currency)"></span>
+                              </div>
+                            </template>
+                            <template x-if="tx.lunchflowTransaction">
+                              <div class="source-item">
+                                <span class="source-label lf">LunchFlow</span>
+                                <span x-text="fmtDate(tx.lunchflowTransaction.date)"></span>
+                                <span class="source-desc" x-text="tx.lunchflowTransaction.merchant || tx.lunchflowTransaction.description || '—'"></span>
+                                <span class="source-amount" :class="tx.lunchflowTransaction.amount < 0 ? 'debit' : 'credit'"
+                                  x-text="(tx.lunchflowTransaction.amount >= 0 ? '+' : '') + fmt(tx.lunchflowTransaction.amount, tx._currency)"></span>
+                              </div>
+                            </template>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </table>
+
+                <!-- Pagination -->
+                <template x-if="overviewTotalPages > 1">
+                  <div class="pagination">
+                    <button class="btn btn-ghost" :disabled="overviewPage === 0" @click="overviewPage--">← Prev</button>
+                    <span>Page <span x-text="overviewPage + 1"></span> of <span x-text="overviewTotalPages"></span></span>
+                    <button class="btn btn-ghost" :disabled="overviewPage >= overviewTotalPages - 1" @click="overviewPage++">Next →</button>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
       </template>
 
-      <template x-if="selected">
+      <!-- Account detail -->
+      <template x-if="view === 'account' && selected">
         <div style="display:flex;flex-direction:column;height:100%">
-          <!-- Header -->
           <div id="main-header">
             <h2 x-text="selected.displayName"></h2>
             <div class="balance-row">
@@ -316,7 +598,6 @@
             </div>
           </div>
 
-          <!-- Content -->
           <div id="content">
 
             <!-- Transactions tab -->
@@ -346,9 +627,12 @@
                         <th class="text-right">Amount</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      <template x-for="tx in transactions" :key="tx.transactionId">
-                        <tr>
+                    <template x-for="tx in transactions" :key="tx.transactionId">
+                      <tbody>
+                        <tr
+                          :class="{ 'tx-expandable': tx.reconciliationStatus === 'matched' }"
+                          @click="tx.reconciliationStatus === 'matched' && toggleExpand(tx.transactionId)"
+                        >
                           <td class="text-nowrap">
                             <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
                             <template x-if="tx.status === 'PENDING'">
@@ -357,6 +641,9 @@
                           </td>
                           <td>
                             <div>
+                              <template x-if="tx.reconciliationStatus === 'matched'">
+                                <span class="tx-expand-icon" x-text="expandedTxns[tx.transactionId] ? '▼' : '▶'"></span>
+                              </template>
                               <span x-text="tx.payee || tx.description"></span>
                               <template x-if="tx.status === 'PENDING'">
                                 <span class="badge">pending</span>
@@ -371,8 +658,32 @@
                               x-text="(tx.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(tx.amount, selected.currency?.currencyCode)">
                           </td>
                         </tr>
-                      </template>
-                    </tbody>
+                        <tr x-show="expandedTxns[tx.transactionId]" class="tx-source-row">
+                          <td colspan="3">
+                            <div class="source-txns">
+                              <template x-if="tx.simplefinTransaction">
+                                <div class="source-item">
+                                  <span class="source-label sfin">SimpleFIN</span>
+                                  <span x-text="fmtDateShort(tx.simplefinTransaction.postedTimestamp)"></span>
+                                  <span class="source-desc" x-text="tx.simplefinTransaction.payee || tx.simplefinTransaction.description || '—'"></span>
+                                  <span class="source-amount" :class="tx.simplefinTransaction.amount < 0 ? 'debit' : 'credit'"
+                                    x-text="(tx.simplefinTransaction.amount >= 0 ? '+' : '') + fmt(tx.simplefinTransaction.amount, selected.currency?.currencyCode)"></span>
+                                </div>
+                              </template>
+                              <template x-if="tx.lunchflowTransaction">
+                                <div class="source-item">
+                                  <span class="source-label lf">LunchFlow</span>
+                                  <span x-text="fmtDate(tx.lunchflowTransaction.date)"></span>
+                                  <span class="source-desc" x-text="tx.lunchflowTransaction.merchant || tx.lunchflowTransaction.description || '—'"></span>
+                                  <span class="source-amount" :class="tx.lunchflowTransaction.amount < 0 ? 'debit' : 'credit'"
+                                    x-text="(tx.lunchflowTransaction.amount >= 0 ? '+' : '') + fmt(tx.lunchflowTransaction.amount, selected.currency?.currencyCode)"></span>
+                                </div>
+                              </template>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </template>
                   </table>
                 </template>
               </div>
@@ -420,15 +731,253 @@
           </div>
         </div>
       </template>
+
+      <!-- Reconciliation management -->
+      <template x-if="view === 'reconciliation'">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div id="main-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+              <h2 style="margin:0">Account Reconciliation</h2>
+              <button class="btn btn-ghost" style="flex-shrink:0" :disabled="reconRunning" @click="runReconciliation()">
+                <span x-text="reconRunning ? 'Running…' : 'Run Now'"></span>
+              </button>
+            </div>
+            <div class="balance-row" style="margin-top:4px">
+              <template x-if="reconMatches.length > 0">
+                <span>
+                  <span class="recon-stat"><strong x-text="reconMatchedCount"></strong> matched</span>
+                  <span class="recon-stat"><strong x-text="reconSfinOnlyCount"></strong> SimpleFIN-only</span>
+                  <span class="recon-stat"><strong x-text="reconLfOnlyCount"></strong> LunchFlow-only</span>
+                </span>
+              </template>
+              <template x-if="reconMatches.length === 0 && !reconLoading">
+                <span>No reconciliation data yet — waiting for first fetch.</span>
+              </template>
+            </div>
+            <div class="tab-bar">
+              <button @click="reconTab = 'matches'" :class="{ active: reconTab === 'matches' }">Account Matches</button>
+              <button @click="reconTab = 'rules'" :class="{ active: reconTab === 'rules' }">Rules</button>
+            </div>
+          </div>
+
+          <div id="content">
+            <template x-if="reconLoading">
+              <div class="placeholder">Loading…</div>
+            </template>
+            <template x-if="reconError">
+              <div class="error-msg" x-text="reconError"></div>
+            </template>
+
+            <!-- Account Matches tab -->
+            <template x-if="!reconLoading && !reconError && reconTab === 'matches'">
+              <div>
+                <template x-if="reconMatches.length === 0">
+                  <div class="placeholder">No account matches yet.</div>
+                </template>
+                <template x-if="reconMatches.length > 0">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Status</th>
+                        <th>SimpleFIN Account</th>
+                        <th>LunchFlow Account</th>
+                        <th>Confidence</th>
+                        <th>Display Name</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="row in reconMatches" :key="row.id">
+                        <tr>
+                          <td>
+                            <template x-if="row.status === 'matched'">
+                              <span>
+                                <span class="status-badge matched">Matched</span>
+                                <template x-if="isUserForced(row)">
+                                  <span class="status-badge user" style="margin-left:4px">User</span>
+                                </template>
+                              </span>
+                            </template>
+                            <template x-if="row.status === 'sfin_only'">
+                              <span class="status-badge sfin-only">SimpleFIN only</span>
+                            </template>
+                            <template x-if="row.status === 'lf_only'">
+                              <span class="status-badge lf-only">LunchFlow only</span>
+                            </template>
+                          </td>
+                          <td x-text="row.sfin_name ?? '—'"></td>
+                          <td x-text="row.lf_name ?? '—'"></td>
+                          <td class="confidence">
+                            <template x-if="row.match_confidence > 0">
+                              <span x-text="Math.round(row.match_confidence * 100) + '%'"></span>
+                            </template>
+                            <template x-if="!row.match_confidence || row.match_confidence === 0">
+                              <span>—</span>
+                            </template>
+                          </td>
+                          <td>
+                            <template x-if="row.status === 'matched'">
+                              <select
+                                style="border:1px solid var(--border);border-radius:var(--radius);padding:3px 6px;font-size:12px;font-family:var(--font);background:var(--surface);color:var(--text)"
+                                :value="row.preferred_name_source"
+                                @change="setNamePreference(row, $event.target.value)"
+                              >
+                                <option value="simplefin" x-text="row.sfin_name ?? 'SimpleFIN'"></option>
+                                <option value="lunchflow" x-text="row.lf_name ?? 'LunchFlow'"></option>
+                              </select>
+                            </template>
+                            <template x-if="row.status !== 'matched'">
+                              <span>—</span>
+                            </template>
+                          </td>
+                          <td>
+                            <template x-if="row.status === 'matched'">
+                              <button class="btn-sm danger" @click="unlinkAccounts(row)">Unlink</button>
+                            </template>
+                            <template x-if="row.status === 'sfin_only'">
+                              <div>
+                                <template x-if="linkingMatchId !== row.id">
+                                  <button class="btn-sm ghost" @click="startLinking(row)">Link to LunchFlow ▾</button>
+                                </template>
+                                <template x-if="linkingMatchId === row.id">
+                                  <div class="inline-link-form">
+                                    <select x-model="linkingTarget">
+                                      <option value="">Select account…</option>
+                                      <template x-for="a in availableLfAccounts" :key="a.lf_account_id">
+                                        <option :value="a.lf_account_id" x-text="a.lf_name"></option>
+                                      </template>
+                                    </select>
+                                    <button class="btn-sm" :disabled="!linkingTarget" @click="confirmLink(row)">Link</button>
+                                    <button class="btn-sm ghost" @click="cancelLinking()">Cancel</button>
+                                  </div>
+                                </template>
+                              </div>
+                            </template>
+                            <template x-if="row.status === 'lf_only'">
+                              <div>
+                                <template x-if="linkingMatchId !== row.id">
+                                  <button class="btn-sm ghost" @click="startLinking(row)">Link to SimpleFIN ▾</button>
+                                </template>
+                                <template x-if="linkingMatchId === row.id">
+                                  <div class="inline-link-form">
+                                    <select x-model="linkingTarget">
+                                      <option value="">Select account…</option>
+                                      <template x-for="a in availableSfinAccounts" :key="a.sfin_account_id">
+                                        <option :value="a.sfin_account_id" x-text="a.sfin_name"></option>
+                                      </template>
+                                    </select>
+                                    <button class="btn-sm" :disabled="!linkingTarget" @click="confirmLink(row)">Link</button>
+                                    <button class="btn-sm ghost" @click="cancelLinking()">Cancel</button>
+                                  </div>
+                                </template>
+                              </div>
+                            </template>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </template>
+              </div>
+            </template>
+
+            <!-- Rules tab -->
+            <template x-if="!reconLoading && !reconError && reconTab === 'rules'">
+              <div>
+                <!-- Add rule form -->
+                <template x-if="!showAddRule">
+                  <div style="margin-bottom:16px">
+                    <button class="btn" @click="showAddRule = true">+ Add Rule</button>
+                  </div>
+                </template>
+                <template x-if="showAddRule">
+                  <div class="recon-form">
+                    <label>
+                      Action
+                      <select x-model="newRuleAction">
+                        <option value="match">Force match</option>
+                        <option value="exclude">Exclude</option>
+                      </select>
+                    </label>
+                    <label>
+                      SimpleFIN Account
+                      <select x-model="newRuleSfinId">
+                        <option value="">— (any)</option>
+                        <template x-for="a in allSfinAccounts" :key="a.sfin_account_id">
+                          <option :value="a.sfin_account_id" x-text="a.sfin_name"></option>
+                        </template>
+                      </select>
+                    </label>
+                    <label>
+                      LunchFlow Account
+                      <select x-model="newRuleLfId">
+                        <option value="">— (any)</option>
+                        <template x-for="a in allLfMatchAccounts" :key="a.lf_account_id">
+                          <option :value="a.lf_account_id" x-text="a.lf_name"></option>
+                        </template>
+                      </select>
+                    </label>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <button class="btn" :disabled="newRuleSubmitting || !isNewRuleValid" @click="submitAddRule()">Save</button>
+                      <button class="btn btn-ghost" @click="cancelAddRule()">Cancel</button>
+                      <span class="error-msg" x-show="newRuleError" x-text="newRuleError" style="padding:0"></span>
+                    </div>
+                  </div>
+                </template>
+
+                <template x-if="reconRules.length === 0">
+                  <div class="placeholder">No user-defined rules. Rules override automatic reconciliation.</div>
+                </template>
+                <template x-if="reconRules.length > 0">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Action</th>
+                        <th>SimpleFIN Account</th>
+                        <th>LunchFlow Account</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="rule in reconRules" :key="rule.id">
+                        <tr>
+                          <td>
+                            <span class="status-badge" :class="rule.action === 'match' ? 'matched' : 'sfin-only'" x-text="rule.action === 'match' ? 'Force match' : 'Exclude'"></span>
+                          </td>
+                          <td x-text="sfinNameForId(rule.sfin_account_id) ?? '— (any)'"></td>
+                          <td x-text="lfNameForId(rule.lf_account_id) ?? '— (any)'"></td>
+                          <td style="text-align:right">
+                            <button class="btn-sm danger" @click="deleteRule(rule.id)">Delete</button>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
     </div>
   </div>
 
   <script>
+    const PAGE_SIZE = 30;
+    const OVERVIEW_DAYS = 90;
+
     function app() {
       return {
+        // Nav
+        view: 'overview',
+
+        // Accounts
         accounts: [],
         accountsError: null,
         selected: null,
+
+        // Account detail
         tab: 'transactions',
         transactions: [],
         txLoading: false,
@@ -436,10 +985,157 @@
         holdings: [],
         holdingsLoading: false,
         holdingsError: null,
-        status: 'Loading…',
-        statusError: false,
         startDate: '',
         endDate: '',
+
+        // Expanded reconciled transaction rows (keyed by transactionId)
+        expandedTxns: {},
+
+        // Overview
+        overviewPending: [],
+        overviewPosted: [],
+        displayItems: [],   // pending first, then posted — recomputed on load/filter change
+        overviewPage: 0,
+        overviewFilter: 'all',
+        overviewLoading: false,
+        overviewError: null,
+
+        // Status
+        status: 'Loading…',
+        statusError: false,
+
+        // Reconciliation management
+        reconTab: 'matches',
+        reconMatches: [],
+        reconRules: [],
+        reconLoading: false,
+        reconRunning: false,
+        reconError: null,
+        // Inline link picker
+        linkingMatchId: null,
+        linkingRow: null,
+        linkingTarget: '',
+        // Add rule form
+        showAddRule: false,
+        newRuleAction: 'match',
+        newRuleSfinId: '',
+        newRuleLfId: '',
+        newRuleSubmitting: false,
+        newRuleError: null,
+
+        get lunchflowPresent() {
+          return this.accounts.some(a => a.accountId.startsWith('LUNCHFLOW-') || a.accountId.startsWith('REC-'));
+        },
+
+        get reconAccounts() {
+          return this.accounts.filter(a => a.accountId.startsWith('REC-'));
+        },
+
+        get sfinAccounts() {
+          const reconciled = new Set(this.reconAccounts.map(a => a.simplefinAccountId).filter(Boolean));
+          return this.accounts.filter(a => a.accountId.startsWith('SIMPLEFIN-') && !reconciled.has(a.accountId));
+        },
+
+        get lfAccounts() {
+          const reconciled = new Set(this.reconAccounts.map(a => a.lunchflowAccountId).filter(Boolean));
+          return this.accounts.filter(a => a.accountId.startsWith('LUNCHFLOW-') && !reconciled.has(a.accountId));
+        },
+
+        applyOverviewFilter() {
+          const rec = this.overviewFilter === 'reconciled';
+          const pending = rec
+            ? this.overviewPending.filter(tx => tx._accountId.startsWith('REC-'))
+            : this.overviewPending;
+          const posted = rec
+            ? this.overviewPosted.filter(tx => tx._accountId.startsWith('REC-'))
+            : this.overviewPosted;
+          this.displayItems = [...pending, ...posted];
+        },
+
+        setOverviewFilter(f) {
+          this.overviewFilter = f;
+          this.overviewPage = 0;
+          this.applyOverviewFilter();
+        },
+
+        // Reconciliation computed helpers
+        get reconMatchedCount() {
+          return this.reconMatches.filter(r => r.status === 'matched').length;
+        },
+        get reconSfinOnlyCount() {
+          return this.reconMatches.filter(r => r.status === 'sfin_only').length;
+        },
+        get reconLfOnlyCount() {
+          return this.reconMatches.filter(r => r.status === 'lf_only').length;
+        },
+        isUserForced(row) {
+          return this.reconRules.some(r =>
+            r.action === 'match' &&
+            r.sfin_account_id === row.sfin_account_id &&
+            r.lf_account_id === row.lf_account_id
+          );
+        },
+        // All sfin accounts from matches (for dropdowns)
+        get allSfinAccounts() {
+          return this.reconMatches
+            .filter(r => r.sfin_account_id)
+            .map(r => ({ sfin_account_id: r.sfin_account_id, sfin_name: r.sfin_name }))
+            .filter((v, i, arr) => arr.findIndex(x => x.sfin_account_id === v.sfin_account_id) === i);
+        },
+        // All lf accounts from matches (for dropdowns)
+        get allLfMatchAccounts() {
+          return this.reconMatches
+            .filter(r => r.lf_account_id)
+            .map(r => ({ lf_account_id: r.lf_account_id, lf_name: r.lf_name }))
+            .filter((v, i, arr) => arr.findIndex(x => x.lf_account_id === v.lf_account_id) === i);
+        },
+        // Unmatched lf accounts available for linking
+        get availableLfAccounts() {
+          const matchedLfIds = new Set(
+            this.reconMatches.filter(r => r.status === 'matched').map(r => r.lf_account_id)
+          );
+          return this.allLfMatchAccounts.filter(a => !matchedLfIds.has(a.lf_account_id));
+        },
+        // Unmatched sfin accounts available for linking
+        get availableSfinAccounts() {
+          const matchedSfinIds = new Set(
+            this.reconMatches.filter(r => r.status === 'matched').map(r => r.sfin_account_id)
+          );
+          return this.allSfinAccounts.filter(a => !matchedSfinIds.has(a.sfin_account_id));
+        },
+        sfinNameForId(id) {
+          if (!id) return null;
+          const found = this.reconMatches.find(r => r.sfin_account_id === id);
+          return found?.sfin_name ?? id;
+        },
+        lfNameForId(id) {
+          if (id == null) return null;
+          const found = this.reconMatches.find(r => r.lf_account_id === id);
+          return found?.lf_name ?? String(id);
+        },
+        get isNewRuleValid() {
+          if (!this.newRuleSfinId && !this.newRuleLfId) return false;
+          if (this.newRuleAction === 'match' && (!this.newRuleSfinId || !this.newRuleLfId)) return false;
+          return true;
+        },
+
+        get overviewPagedItems() {
+          const start = this.overviewPage * PAGE_SIZE;
+          return this.displayItems.slice(start, start + PAGE_SIZE);
+        },
+
+        get overviewTotalPages() {
+          return Math.max(1, Math.ceil(this.displayItems.length / PAGE_SIZE));
+        },
+
+        get overviewSubtitle() {
+          const p = this.overviewPending.length;
+          const n = this.overviewPosted.length;
+          const parts = [];
+          if (p > 0) parts.push(`${p} pending`);
+          parts.push(`${n} posted (last ${OVERVIEW_DAYS} days)`);
+          return parts.join(' · ');
+        },
 
         init() {
           const end = new Date();
@@ -476,16 +1172,76 @@
           try {
             const d = await fetch('/fdx/v6/accounts').then(r => r.json());
             this.accounts = d.accounts ?? [];
-            if (this.accounts.length > 0) this.selectAccount(this.accounts[0]);
+            await this.loadOverview();
           } catch (e) {
             this.accountsError = e.message;
           }
         },
 
+        async selectOverview() {
+          this.view = 'overview';
+          this.selected = null;
+          this.overviewPage = 0;
+          if (this.overviewPosted.length === 0 && this.overviewPending.length === 0 && !this.overviewLoading) {
+            await this.loadOverview();
+          }
+        },
+
         async selectAccount(acct) {
+          this.view = 'account';
           this.selected = acct;
           this.tab = 'transactions';
           await this.loadTransactions();
+        },
+
+        async loadOverview() {
+          if (this.accounts.length === 0) return;
+          this.overviewLoading = true;
+          this.overviewError = null;
+          this.overviewPage = 0;
+
+          const end = new Date();
+          const start = new Date();
+          start.setDate(start.getDate() - OVERVIEW_DAYS);
+          const startIso = start.toISOString().slice(0, 10) + 'T00:00:00Z';
+          const endIso = end.toISOString().slice(0, 10) + 'T23:59:59Z';
+
+          try {
+            // Build the set of source account IDs claimed by a REC- account so
+            // we don't also fetch their transactions from the raw source endpoints.
+            const claimedByRec = new Set(
+              this.accounts
+                .filter(a => a.accountId.startsWith('REC-'))
+                .flatMap(a => [a.simplefinAccountId, a.lunchflowAccountId])
+                .filter(Boolean)
+            );
+            const visibleAccounts = this.accounts.filter(a =>
+              a.accountId.startsWith('REC-') || !claimedByRec.has(a.accountId)
+            );
+            const results = await Promise.all(visibleAccounts.map(async acct => {
+              const url = `/fdx/v6/accounts/${encodeURIComponent(acct.accountId)}/transactions`
+                + `?startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}`;
+              const d = await fetch(url).then(r => r.json());
+              const currency = acct.currency?.currencyCode ?? 'USD';
+              return (d.transactions ?? []).map(tx => ({
+                ...tx,
+                _accountId: acct.accountId,
+                _accountName: acct.displayName,
+                _currency: currency,
+              }));
+            }));
+
+            const all = results.flat();
+            this.overviewPending = all.filter(tx => tx.status === 'PENDING');
+            this.overviewPosted = all
+              .filter(tx => tx.status !== 'PENDING')
+              .sort((a, b) => new Date(b.postedTimestamp) - new Date(a.postedTimestamp));
+            this.applyOverviewFilter();
+          } catch (e) {
+            this.overviewError = e.message;
+          } finally {
+            this.overviewLoading = false;
+          }
         },
 
         async switchTab(tab) {
@@ -526,6 +1282,141 @@
           } finally {
             this.holdingsLoading = false;
           }
+        },
+
+        async setNamePreference(row, preferredSource) {
+          row.preferred_name_source = preferredSource;
+          await fetch(`/api/reconciliation/name-preference/${encodeURIComponent(row.sfin_account_id)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preferred_source: preferredSource }),
+          });
+          // Reload accounts so the sidebar and header reflect the new name.
+          await this.loadAccounts();
+        },
+
+        async runReconciliation() {
+          this.reconRunning = true;
+          try {
+            await fetch('/api/reconciliation/run', { method: 'POST' });
+            await this.loadReconciliationData();
+            await this.loadAccounts();
+          } finally {
+            this.reconRunning = false;
+          }
+        },
+
+        async selectReconciliation() {
+          this.view = 'reconciliation';
+          this.selected = null;
+          await this.loadReconciliationData();
+        },
+
+        async loadReconciliationData() {
+          this.reconLoading = true;
+          this.reconError = null;
+          try {
+            const [matches, rules] = await Promise.all([
+              fetch('/api/reconciliation/account-matches').then(r => r.json()),
+              fetch('/api/reconciliation/account-rules').then(r => r.json()),
+            ]);
+            this.reconMatches = matches;
+            this.reconRules = rules;
+          } catch (e) {
+            this.reconError = e.message;
+          } finally {
+            this.reconLoading = false;
+          }
+        },
+
+        startLinking(row) {
+          this.linkingMatchId = row.id;
+          this.linkingRow = row;
+          this.linkingTarget = '';
+        },
+
+        cancelLinking() {
+          this.linkingMatchId = null;
+          this.linkingRow = null;
+          this.linkingTarget = '';
+        },
+
+        async confirmLink(row) {
+          if (!this.linkingTarget) return;
+          const sfinId = row.status === 'sfin_only' ? row.sfin_account_id : this.linkingTarget;
+          const lfId = row.status === 'lf_only' ? row.lf_account_id : parseInt(this.linkingTarget, 10);
+          await this.addRule('match', sfinId, lfId);
+          this.cancelLinking();
+        },
+
+        async addRule(action, sfinId, lfId) {
+          const body = { action };
+          if (sfinId) body.sfin_account_id = sfinId;
+          if (lfId != null) body.lf_account_id = lfId;
+          const res = await fetch('/api/reconciliation/account-rules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Request failed' }));
+            throw new Error(err.error ?? 'Request failed');
+          }
+          await this.loadReconciliationData();
+          // Reload accounts so the sidebar reflects the new match.
+          await this.loadAccounts();
+        },
+
+        async unlinkAccounts(row) {
+          // If there's a user-forced match rule, delete it.
+          const rule = this.reconRules.find(r =>
+            r.action === 'match' &&
+            r.sfin_account_id === row.sfin_account_id &&
+            r.lf_account_id === row.lf_account_id
+          );
+          if (rule) {
+            await this.deleteRule(rule.id);
+            return;
+          }
+          // Otherwise create an exclude rule to block the auto-match.
+          await this.addRule('exclude', row.sfin_account_id, row.lf_account_id);
+        },
+
+        async submitAddRule() {
+          this.newRuleSubmitting = true;
+          this.newRuleError = null;
+          try {
+            await this.addRule(
+              this.newRuleAction,
+              this.newRuleSfinId || null,
+              this.newRuleLfId ? parseInt(this.newRuleLfId, 10) : null,
+            );
+            this.cancelAddRule();
+          } catch (e) {
+            this.newRuleError = e.message;
+          } finally {
+            this.newRuleSubmitting = false;
+          }
+        },
+
+        cancelAddRule() {
+          this.showAddRule = false;
+          this.newRuleAction = 'match';
+          this.newRuleSfinId = '';
+          this.newRuleLfId = '';
+          this.newRuleError = null;
+        },
+
+        async deleteRule(id) {
+          await fetch(`/api/reconciliation/account-rules/${id}`, { method: 'DELETE' });
+          await this.loadReconciliationData();
+          await this.loadAccounts();
+        },
+
+        toggleExpand(id) {
+          this.expandedTxns = this.expandedTxns[id]
+            ? Object.fromEntries(Object.entries(this.expandedTxns).filter(([k]) => k !== id))
+            : { ...this.expandedTxns, [id]: true };
         },
 
         fmt(amount, currency) {

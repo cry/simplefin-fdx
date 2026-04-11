@@ -16,11 +16,16 @@ pub struct CachedAccount {
 
 #[derive(Default)]
 pub struct CacheState {
+    /// SimpleFIN accounts — empty when SimpleFIN is not configured.
     pub accounts: Vec<CachedAccount>,
-    /// Unix timestamp of the last successful fetch.
+    /// Unix timestamp of the last successful SimpleFIN fetch.
     pub last_fetched: Option<i64>,
-    /// Error message from the most recent failed fetch, if any.
+    /// Error from the most recent failed SimpleFIN fetch.
     pub fetch_error: Option<String>,
+    /// Unix timestamp of the last successful LunchFlow fetch.
+    pub lf_last_fetched: Option<i64>,
+    /// Error from the most recent failed LunchFlow fetch.
+    pub lf_fetch_error: Option<String>,
 }
 
 pub type SharedState = Arc<RwLock<CacheState>>;
