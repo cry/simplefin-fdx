@@ -2,8 +2,8 @@ mod config;
 mod db;
 mod error;
 mod fdx;
-mod fetcher;
 mod lunchflow;
+mod simplefin;
 mod state;
 mod util;
 
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if simplefin_configured {
-        tokio::spawn(fetcher::run(
+        tokio::spawn(simplefin::fetcher::run(
             pool.clone(),
             shared.clone(),
             cfg.setup_token,

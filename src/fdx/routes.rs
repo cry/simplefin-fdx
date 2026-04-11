@@ -9,7 +9,6 @@ use sqlx::{Row, SqlitePool};
 use utoipa::{IntoParams, OpenApi};
 
 use crate::{
-    db,
     error::AppError,
     fdx::{
         ErrorResponse, FdxAccount, FdxAccountList, FdxHoldingList, FdxPage, FdxTransactionList,
@@ -25,6 +24,7 @@ use crate::{
         get_lf_transactions_raw, get_unified_transactions, get_user_account_rules,
         insert_user_account_rule, upsert_name_preference,
     },
+    simplefin::db::{get_holdings, get_transactions},
     state::SharedState,
     util,
 };
@@ -331,7 +331,7 @@ pub async fn list_transactions(
                     return Err(AppError::AccountNotFound);
                 }
             }
-            let rows = db::get_transactions(&app.pool, &sfin_id, start_ts, end_ts).await?;
+            let rows = get_transactions(&app.pool, &sfin_id, start_ts, end_ts).await?;
             let transactions: Vec<_> = rows.iter().map(transaction_row_to_fdx).collect();
             let total = transactions.len();
             Ok(Json(FdxTransactionList {
@@ -424,7 +424,7 @@ pub async fn list_holdings(
         }
     }
 
-    let rows = db::get_holdings(&app.pool, &sfin_id).await?;
+    let rows = get_holdings(&app.pool, &sfin_id).await?;
     let holdings: Vec<_> = rows.iter().map(holding_row_to_fdx).collect();
     let total = holdings.len();
     Ok(Json(FdxHoldingList {

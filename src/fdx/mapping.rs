@@ -2,11 +2,11 @@ use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use tracing::warn;
 
 use crate::{
-    db::{HoldingRow, TransactionRow},
     fdx::{
         FdxAccount, FdxCurrency, FdxHolding, FdxTransaction, LfTransactionExt, SfinTransactionExt,
     },
     lunchflow::db::{LfAccountFull, UnifiedTransaction},
+    simplefin::db::{HoldingRow, TransactionRow},
     state::CachedAccount,
 };
 
