@@ -5,7 +5,8 @@ use crate::{
     fdx::{
         FdxAccount, FdxCurrency, FdxHolding, FdxTransaction, LfTransactionExt, SfinTransactionExt,
     },
-    lunchflow::db::{LfAccountFull, UnifiedTransaction},
+    lunchflow::db::LfAccountFull,
+    reconciler::UnifiedTransaction,
     simplefin::db::{HoldingRow, TransactionRow},
     state::CachedAccount,
 };
@@ -262,7 +263,8 @@ pub fn holding_row_to_fdx(row: &HoldingRow) -> FdxHolding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lunchflow::db::{LfTransactionView, SfinTransactionView, UnifiedTransaction};
+    use crate::reconciler::UnifiedTransaction;
+    use crate::reconciler::db::{LfTransactionView, SfinTransactionView};
 
     fn sfin_view(
         id: &str,
