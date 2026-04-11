@@ -1773,10 +1773,21 @@
           const ok = iso => !!iso && new Date(iso).getFullYear() > 1970;
           const a = tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp;
           const b = tx.status === 'PENDING' ? tx.postedTimestamp : tx.transactionTimestamp;
-          if (ok(a)) return a;
-          if (ok(b)) return b;
-          if (ok(tx.lunchflowTransaction?.date)) return tx.lunchflowTransaction.date;
-          return a;
+          const lfDate = tx.lunchflowTransaction?.date;
+          const result = ok(a) ? a : ok(b) ? b : ok(lfDate) ? lfDate : a;
+          if (!ok(result)) {
+            console.warn('[txDate] no valid date found', {
+              txId: tx.transactionId,
+              status: tx.status,
+              postedTimestamp: tx.postedTimestamp,
+              transactionTimestamp: tx.transactionTimestamp,
+              lfDate,
+              postedYear: tx.postedTimestamp ? new Date(tx.postedTimestamp).getFullYear() : null,
+              hasLfTx: !!tx.lunchflowTransaction,
+              result,
+            });
+          }
+          return result;
         },
 
         fmtDate(iso) {
