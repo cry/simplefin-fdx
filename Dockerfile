@@ -13,10 +13,10 @@ FROM debian:bookworm-slim
 
 RUN adduser --disabled-password --gecos "" appuser
 
-COPY --from=builder /app/target/release/simplefin-server /usr/local/bin/simplefin-server
+COPY --from=builder /app/target/release/ledger-hub /usr/local/bin/ledger-hub
 
 USER appuser
 
 EXPOSE 8080
 
-CMD ["simplefin-server"]
+CMD ["ledger-hub"]

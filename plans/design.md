@@ -44,7 +44,7 @@ SIMPLEFIN_SETUP_TOKEN   # One-time setup token from the bridge (used on first st
 SIMPLEFIN_ACCESS_URL    # Persisted access URL after setup (stored in DB after first claim)
 FETCH_INTERVAL_SECS     # How often to poll SimpleFIN (default: 3600)
 SERVER_ADDR             # Bind address (default: 0.0.0.0:8080)
-DATABASE_URL            # SQLite path (default: sqlite://simplefin.db)
+DATABASE_URL            # SQLite path (default: sqlite://ledger-hub.db)
 START_DATE_DAYS_BACK    # How many days of history to fetch on first run (default: 90)
 ```
 

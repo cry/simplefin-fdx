@@ -1,4 +1,4 @@
-# simplefin-server
+# ledger-hub
 
 ## Build & run
 
@@ -15,7 +15,9 @@ cargo run
 | `LUNCHFLOW_API_KEY` | — | LunchFlow API key. If absent the LunchFlow fetcher is disabled. Not required if `SIMPLEFIN_SETUP_TOKEN` / a saved access URL is present. |
 | `FETCH_INTERVAL_SECS` | `3600` | Seconds between polls. Applies to both fetchers. |
 | `SERVER_ADDR` | `0.0.0.0:8080` | TCP address the HTTP server binds to. |
-| `DATABASE_URL` | `sqlite://simplefin.db` | SQLite connection string. The file is created automatically. |
+| `DATABASE_URL` | `sqlite://ledger-hub.db` | SQLite connection string. The file is created automatically. |
+</not_new_text>
+
 | `START_DATE_DAYS_BACK` | `90` | Days of history to fetch on the very first run. Applies to both SimpleFIN and LunchFlow. |
 
 At least one of `SIMPLEFIN_SETUP_TOKEN` / saved access URL or `LUNCHFLOW_API_KEY` must be present or the server will start but serve no data.

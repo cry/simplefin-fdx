@@ -982,6 +982,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ledger-hub"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "lunchflow",
+ "serde",
+ "serde_json",
+ "simplefin",
+ "sqlx",
+ "strsim",
+ "thiserror",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "utoipa",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.184"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1742,27 +1763,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
-]
-
-[[package]]
-name = "simplefin-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "lunchflow",
- "serde",
- "serde_json",
- "simplefin",
- "sqlx",
- "strsim",
- "thiserror",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "utoipa",
 ]
 
 [[package]]

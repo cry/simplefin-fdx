@@ -7,7 +7,7 @@ pub struct Config {
     pub fetch_interval_secs: u64,
     /// TCP address to listen on.
     pub server_addr: String,
-    /// SQLite connection string, e.g. `sqlite://simplefin.db`.
+    /// SQLite connection string, e.g. `sqlite://ledger-hub.db`.
     pub database_url: String,
     /// Days of transaction history to fetch on the very first run.
     pub start_date_days_back: u64,
@@ -25,7 +25,7 @@ impl Config {
                 .unwrap_or(3600),
             server_addr: env::var("SERVER_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
             database_url: env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "sqlite://simplefin.db".to_string()),
+                .unwrap_or_else(|_| "sqlite://ledger-hub.db".to_string()),
             start_date_days_back: env::var("START_DATE_DAYS_BACK")
                 .ok()
                 .and_then(|s| s.parse().ok())

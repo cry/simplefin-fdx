@@ -1,4 +1,4 @@
-# simplefin-server
+# ledger-hub
 
 A Rust server that polls [SimpleFIN](https://www.simplefin.org/) and/or [LunchFlow](https://lunchflow.app) for account and transaction data, stores it in SQLite, and serves it via a [FDX v6](https://financialdataexchange.org/) compatible REST API.
 
@@ -44,7 +44,7 @@ export SIMPLEFIN_SETUP_TOKEN=<your token>
 export LUNCHFLOW_API_KEY=<your key>
 
 # Common options (all have defaults)
-export DATABASE_URL=sqlite://simplefin.db
+export DATABASE_URL=sqlite://ledger-hub.db
 export SERVER_ADDR=127.0.0.1:8080
 export FETCH_INTERVAL_SECS=3600
 export START_DATE_DAYS_BACK=90
@@ -64,7 +64,7 @@ Fetch state is persisted so restarting the server will not trigger an immediate 
 | `LUNCHFLOW_API_KEY` | — | LunchFlow API key. If absent the LunchFlow fetcher is disabled. |
 | `FETCH_INTERVAL_SECS` | `3600` | Seconds between polls. Applies to both fetchers. |
 | `SERVER_ADDR` | `0.0.0.0:8080` | TCP address the HTTP server binds to. |
-| `DATABASE_URL` | `sqlite://simplefin.db` | SQLite connection string. The file is created automatically. |
+| `DATABASE_URL` | `sqlite://ledger-hub.db` | SQLite connection string. The file is created automatically. |
 | `START_DATE_DAYS_BACK` | `90` | Days of history to fetch on the very first run (both sources). |
 
 ## Docker
@@ -72,7 +72,7 @@ Fetch state is persisted so restarting the server will not trigger an immediate 
 ### Build
 
 ```bash
-docker build -t simplefin-server .
+docker build -t ledger-hub .
 ```
 
 ### Run
@@ -84,39 +84,39 @@ mkdir -p /path/to/data
 
 # SimpleFIN only
 docker run -d \
-  --name simplefin-server \
+  --name ledger-hub \
   -p 8080:8080 \
   -v /path/to/data:/data \
-  -e DATABASE_URL=sqlite:///data/simplefin.db \
+  -e DATABASE_URL=sqlite:///data/ledger-hub.db \
   -e SIMPLEFIN_SETUP_TOKEN=<your token> \
-  simplefin-server
+  ledger-hub
 
 # LunchFlow only
 docker run -d \
-  --name simplefin-server \
+  --name ledger-hub \
   -p 8080:8080 \
   -v /path/to/data:/data \
-  -e DATABASE_URL=sqlite:///data/simplefin.db \
+  -e DATABASE_URL=sqlite:///data/ledger-hub.db \
   -e LUNCHFLOW_API_KEY=<your key> \
-  simplefin-server
+  ledger-hub
 ```
 
 After the first SimpleFIN run the access URL is stored in the database. You can drop `SIMPLEFIN_SETUP_TOKEN` from subsequent runs.
 
-> **Note:** Use an absolute path for `DATABASE_URL` inside the container (`sqlite:///data/...` with three slashes). A relative path like `sqlite://simplefin.db` would write the database inside the container and lose it on restart.
+> **Note:** Use an absolute path for `DATABASE_URL` inside the container (`sqlite:///data/...` with three slashes). A relative path like `sqlite://ledger-hub.db` would write the database inside the container and lose it on restart.
 
 ### Docker Compose
 
 ```yaml
 services:
-  simplefin-server:
+  ledger-hub:
     build: .
     ports:
       - "8080:8080"
     volumes:
       - ./data:/data
     environment:
-      DATABASE_URL: sqlite:///data/simplefin.db
+      DATABASE_URL: sqlite:///data/ledger-hub.db
       SIMPLEFIN_SETUP_TOKEN: <your token>   # remove after first run
       LUNCHFLOW_API_KEY: <your key>         # optional
       FETCH_INTERVAL_SECS: 3600
