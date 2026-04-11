@@ -1,14 +1,11 @@
-use lunchflow::{
-    LunchFlowClient, TransactionParams,
-    models::AccountStatus,
-};
+use lunchflow::{LunchFlowClient, TransactionParams, models::AccountStatus};
 use sqlx::SqlitePool;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-use crate::{db, state::SharedState, util};
 use super::{db as lf_db, reconciler};
+use crate::{db, state::SharedState, util};
 
 const LF_LAST_FETCHED_KEY: &str = "lf_last_fetched";
 
@@ -151,8 +148,7 @@ pub async fn run(
                 }
                 from_ts = now - 86_400;
 
-                if let Err(e) = db::set_config(&pool, LF_LAST_FETCHED_KEY, &now.to_string()).await
-                {
+                if let Err(e) = db::set_config(&pool, LF_LAST_FETCHED_KEY, &now.to_string()).await {
                     warn!("Failed to persist lf_last_fetched: {e}");
                 }
 

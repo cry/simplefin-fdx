@@ -13,7 +13,10 @@ use sqlx::{Row, SqlitePool};
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, info};
 
-use crate::{lunchflow::db::{get_user_account_rules, UserReconciliationAction}, util};
+use crate::{
+    lunchflow::db::{UserReconciliationAction, get_user_account_rules},
+    util,
+};
 
 /// Confidence threshold above which two records are considered matched.
 const MATCH_THRESHOLD: f64 = 0.6;
@@ -353,8 +356,8 @@ async fn upsert_reconciled_account(
 
 struct SfinTxn {
     id: String,
-    posted: i64,       // unix timestamp
-    amount: f64,       // parsed from the TEXT column
+    posted: i64, // unix timestamp
+    amount: f64, // parsed from the TEXT column
     description: String,
     pending: bool,
 }
@@ -362,8 +365,8 @@ struct SfinTxn {
 struct LfTxn {
     id: String,
     #[allow(dead_code)]
-    date: String,      // YYYY-MM-DD
-    date_ts: i64,      // parsed to unix for arithmetic
+    date: String, // YYYY-MM-DD
+    date_ts: i64, // parsed to unix for arithmetic
     amount: f64,
     merchant: Option<String>,
     description: Option<String>,
@@ -518,16 +521,8 @@ async fn reconcile_transactions_for_pair(
 
     for sfin in &sfin_txns {
         if !matched_sfin_ids.contains(&sfin.id) {
-            upsert_reconciled_transaction(
-                pool,
-                Some(&sfin.id),
-                None,
-                0.0,
-                "sfin_only",
-                now,
-                None,
-            )
-            .await?;
+            upsert_reconciled_transaction(pool, Some(&sfin.id), None, 0.0, "sfin_only", now, None)
+                .await?;
         }
     }
 
@@ -723,13 +718,19 @@ mod tests {
     fn name_similarity_close_names() {
         // "Checking Account" vs "Checking" — should still be fairly high.
         let sim = name_similarity("Checking Account", "Checking");
-        assert!(sim >= 0.5, "similar names should score at or above 0.5, got {sim}");
+        assert!(
+            sim >= 0.5,
+            "similar names should score at or above 0.5, got {sim}"
+        );
     }
 
     #[test]
     fn name_similarity_unrelated_names() {
         let sim = name_similarity("Savings", "Credit Card");
-        assert!(sim < 0.5, "unrelated names should score below 0.5, got {sim}");
+        assert!(
+            sim < 0.5,
+            "unrelated names should score below 0.5, got {sim}"
+        );
     }
 
     #[test]
@@ -850,24 +851,22 @@ mod tests {
     async fn no_transactions_returns_none() {
         let pool = test_pool().await;
         // Accounts exist but have zero transactions on both sides.
-        let score = score_accounts_by_transactions(&pool, "ACT-empty", 99, Some("USD"), Some("USD"))
-            .await
-            .unwrap();
-        assert_eq!(score, None, "zero transactions should return None to trigger name-only fallback");
+        let score =
+            score_accounts_by_transactions(&pool, "ACT-empty", 99, Some("USD"), Some("USD"))
+                .await
+                .unwrap();
+        assert_eq!(
+            score, None,
+            "zero transactions should return None to trigger name-only fallback"
+        );
     }
 
     #[tokio::test]
     async fn currency_mismatch_returns_zero() {
         let pool = test_pool().await;
-        let score = score_accounts_by_transactions(
-            &pool,
-            "ACT-001",
-            1,
-            Some("USD"),
-            Some("AUD"),
-        )
-        .await
-        .unwrap();
+        let score = score_accounts_by_transactions(&pool, "ACT-001", 1, Some("USD"), Some("AUD"))
+            .await
+            .unwrap();
         assert_eq!(score, Some(0.0));
     }
 
@@ -933,7 +932,11 @@ mod tests {
             .await
             .unwrap();
         // 1 transaction < MIN_TRANSACTIONS=2, but min_count > 0 → Some(0.0), not None
-        assert_eq!(score, Some(0.0), "should return Some(0.0) when min_count > 0 but below MIN_TRANSACTIONS");
+        assert_eq!(
+            score,
+            Some(0.0),
+            "should return Some(0.0) when min_count > 0 but below MIN_TRANSACTIONS"
+        );
     }
 
     #[tokio::test]
@@ -968,7 +971,13 @@ mod tests {
 
         // 5 matching transactions (same absolute amount, same day).
         let amounts = [-311.92, -28.11, -103.67, -19.99, -0.04];
-        let descs = ["AUTOPAY PAYMENT", "CLOUD WORKSPACE", "LYFT", "DISNEY PLUS", "INTEREST"];
+        let descs = [
+            "AUTOPAY PAYMENT",
+            "CLOUD WORKSPACE",
+            "LYFT",
+            "DISNEY PLUS",
+            "INTEREST",
+        ];
         for (i, (amount, desc)) in amounts.iter().zip(descs.iter()).enumerate() {
             let i = i as i64;
             sqlx::query(
@@ -1001,7 +1010,10 @@ mod tests {
             .unwrap()
             .expect("should return Some when transactions exist");
         assert!(score >= MATCH_THRESHOLD, "expected high score, got {score}");
-        assert!((score - 1.0).abs() < 0.01, "all txns match, expected 1.0, got {score}");
+        assert!(
+            (score - 1.0).abs() < 0.01,
+            "all txns match, expected 1.0, got {score}"
+        );
     }
 
     #[tokio::test]
@@ -1083,16 +1095,24 @@ mod tests {
             .unwrap();
         }
 
-        let score_correct = score_accounts_by_transactions(&pool, "ACT-A", 10, Some("USD"), Some("USD"))
-            .await
-            .unwrap()
-            .expect("should return Some when transactions exist");
-        let score_wrong = score_accounts_by_transactions(&pool, "ACT-A", 11, Some("USD"), Some("USD"))
-            .await
-            .unwrap()
-            .expect("should return Some when transactions exist");
+        let score_correct =
+            score_accounts_by_transactions(&pool, "ACT-A", 10, Some("USD"), Some("USD"))
+                .await
+                .unwrap()
+                .expect("should return Some when transactions exist");
+        let score_wrong =
+            score_accounts_by_transactions(&pool, "ACT-A", 11, Some("USD"), Some("USD"))
+                .await
+                .unwrap()
+                .expect("should return Some when transactions exist");
 
-        assert!(score_correct >= MATCH_THRESHOLD, "correct pair should match: {score_correct}");
-        assert!(score_wrong < MATCH_THRESHOLD, "wrong pair should not match: {score_wrong}");
+        assert!(
+            score_correct >= MATCH_THRESHOLD,
+            "correct pair should match: {score_correct}"
+        );
+        assert!(
+            score_wrong < MATCH_THRESHOLD,
+            "wrong pair should not match: {score_wrong}"
+        );
     }
 }

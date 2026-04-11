@@ -11,23 +11,22 @@ use utoipa::{IntoParams, OpenApi};
 use crate::{
     db,
     error::AppError,
-    util,
     fdx::{
         ErrorResponse, FdxAccount, FdxAccountList, FdxHoldingList, FdxPage, FdxTransactionList,
         HealthResponse,
         mapping::{
-            cached_account_to_fdx, holding_row_to_fdx, lf_account_to_fdx,
-            lf_transaction_to_fdx, transaction_row_to_fdx, unified_transaction_to_fdx,
-            unix_to_rfc3339,
+            cached_account_to_fdx, holding_row_to_fdx, lf_account_to_fdx, lf_transaction_to_fdx,
+            transaction_row_to_fdx, unified_transaction_to_fdx, unix_to_rfc3339,
         },
     },
     lunchflow::db::{
-        delete_user_account_rule, get_account_matches, get_all_lf_accounts, get_lf_account,
-        get_lf_name_preferences, get_lf_transactions_raw, get_unified_transactions,
-        get_user_account_rules, insert_user_account_rule, upsert_name_preference, AccountMatchRow,
-        UserAccountRule, UserReconciliationAction,
+        AccountMatchRow, UserAccountRule, UserReconciliationAction, delete_user_account_rule,
+        get_account_matches, get_all_lf_accounts, get_lf_account, get_lf_name_preferences,
+        get_lf_transactions_raw, get_unified_transactions, get_user_account_rules,
+        insert_user_account_rule, upsert_name_preference,
     },
     state::SharedState,
+    util,
 };
 
 #[derive(Clone)]
@@ -164,7 +163,12 @@ pub async fn list_accounts(State(app): State<AppState>) -> Result<Json<FdxAccoun
 
     // All SimpleFIN accounts always appear as SIMPLEFIN-.
     if app.simplefin_configured {
-        accounts.extend(state.accounts.iter().map(|a| cached_account_to_fdx(a, "SIMPLEFIN-")));
+        accounts.extend(
+            state
+                .accounts
+                .iter()
+                .map(|a| cached_account_to_fdx(a, "SIMPLEFIN-")),
+        );
     }
 
     // All LunchFlow accounts always appear as LUNCHFLOW-.
@@ -336,8 +340,7 @@ pub async fn list_transactions(
             }))
         }
         AccountSource::LunchFlow(lf_id) => {
-            let txn_rows =
-                get_lf_transactions_raw(&app.pool, lf_id, start_ts, end_ts).await?;
+            let txn_rows = get_lf_transactions_raw(&app.pool, lf_id, start_ts, end_ts).await?;
             if txn_rows.is_empty() {
                 // Verify the account actually exists before returning an empty list.
                 if get_lf_account(&app.pool, lf_id).await?.is_none() {
@@ -371,10 +374,8 @@ pub async fn list_transactions(
                     return Err(AppError::AccountNotFound);
                 }
             }
-            let unified =
-                get_unified_transactions(&app.pool, &sfin_id, start_ts, end_ts).await?;
-            let transactions: Vec<_> =
-                unified.iter().map(unified_transaction_to_fdx).collect();
+            let unified = get_unified_transactions(&app.pool, &sfin_id, start_ts, end_ts).await?;
+            let transactions: Vec<_> = unified.iter().map(unified_transaction_to_fdx).collect();
             let total = transactions.len();
             Ok(Json(FdxTransactionList {
                 transactions,
@@ -533,9 +534,7 @@ pub async fn delete_reconciliation_rule(
     }
 }
 
-pub async fn run_reconciliation(
-    State(app): State<AppState>,
-) -> Result<StatusCode, AppError> {
+pub async fn run_reconciliation(State(app): State<AppState>) -> Result<StatusCode, AppError> {
     crate::lunchflow::reconciler::run(&app.pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }

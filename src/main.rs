@@ -7,7 +7,12 @@ mod lunchflow;
 mod state;
 mod util;
 
-use axum::{Json, Router, http::header, response::IntoResponse, routing::{delete, get, post}};
+use axum::{
+    Json, Router,
+    http::header,
+    response::IntoResponse,
+    routing::{delete, get, post},
+};
 use tower_http::trace::TraceLayer;
 use tracing::{info, warn};
 use utoipa::OpenApi;
@@ -47,9 +52,7 @@ async fn main() -> anyhow::Result<()> {
     let lunchflow_configured = cfg.lunchflow_api_key.is_some();
 
     if !simplefin_configured && !lunchflow_configured {
-        warn!(
-            "No data sources configured. Set SIMPLEFIN_SETUP_TOKEN and/or LUNCHFLOW_API_KEY."
-        );
+        warn!("No data sources configured. Set SIMPLEFIN_SETUP_TOKEN and/or LUNCHFLOW_API_KEY.");
     }
 
     if simplefin_configured && lunchflow_configured {
@@ -102,7 +105,10 @@ async fn main() -> anyhow::Result<()> {
             get(list_transactions),
         )
         .route("/fdx/v6/accounts/{accountId}/holdings", get(list_holdings))
-        .route("/api/reconciliation/account-matches", get(list_account_matches))
+        .route(
+            "/api/reconciliation/account-matches",
+            get(list_account_matches),
+        )
         .route(
             "/api/reconciliation/account-rules",
             get(list_reconciliation_rules).post(create_reconciliation_rule),

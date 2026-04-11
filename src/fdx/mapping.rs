@@ -3,7 +3,9 @@ use tracing::warn;
 
 use crate::{
     db::{HoldingRow, TransactionRow},
-    fdx::{FdxAccount, FdxCurrency, FdxHolding, FdxTransaction, LfTransactionExt, SfinTransactionExt},
+    fdx::{
+        FdxAccount, FdxCurrency, FdxHolding, FdxTransaction, LfTransactionExt, SfinTransactionExt,
+    },
     lunchflow::db::{LfAccountFull, UnifiedTransaction},
     state::CachedAccount,
 };
@@ -17,18 +19,16 @@ pub fn unix_to_rfc3339(ts: i64) -> String {
 
 fn date_to_rfc3339(date: &str) -> String {
     NaiveDate::parse_from_str(date, "%Y-%m-%d")
-        .map(|d| {
-            d.and_hms_opt(0, 0, 0)
-                .unwrap()
-                .and_utc()
-                .to_rfc3339()
-        })
+        .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().to_rfc3339())
         .unwrap_or_else(|_| "1970-01-01T00:00:00+00:00".to_string())
 }
 
 fn parse_amount(s: &str) -> f64 {
     s.parse().unwrap_or_else(|_| {
-        warn!(value = s, "Failed to parse amount string, defaulting to 0.0");
+        warn!(
+            value = s,
+            "Failed to parse amount string, defaulting to 0.0"
+        );
         0.0
     })
 }
@@ -36,7 +36,10 @@ fn parse_amount(s: &str) -> f64 {
 fn parse_amount_opt(s: Option<&str>) -> Option<f64> {
     s.map(|v| {
         v.parse().unwrap_or_else(|_| {
-            warn!(value = v, "Failed to parse optional amount string, defaulting to 0.0");
+            warn!(
+                value = v,
+                "Failed to parse optional amount string, defaulting to 0.0"
+            );
             0.0
         })
     })
@@ -67,7 +70,10 @@ pub fn lf_account_to_fdx(account: &LfAccountFull) -> FdxAccount {
         account_type: "OTHER".to_string(),
         display_name: account.name.clone(),
         currency: FdxCurrency {
-            currency_code: account.currency.clone().unwrap_or_else(|| "USD".to_string()),
+            currency_code: account
+                .currency
+                .clone()
+                .unwrap_or_else(|| "USD".to_string()),
         },
         current_balance: account.balance.unwrap_or(0.0),
         available_balance: None,
@@ -148,7 +154,10 @@ pub fn unified_transaction_to_fdx(txn: &UnifiedTransaction) -> FdxTransaction {
         // For matched transactions: REC-{id} as the canonical ID and nest both
         // source transactions. For sfin_only: keep the SimpleFIN ID as-is.
         let (transaction_id, simplefin_transaction, lunchflow_transaction) = if matched {
-            let rec_id = txn.rec_id.map(|id| format!("REC-{id}")).unwrap_or_else(|| sfin.id.clone());
+            let rec_id = txn
+                .rec_id
+                .map(|id| format!("REC-{id}"))
+                .unwrap_or_else(|| sfin.id.clone());
             let sfin_ext = SfinTransactionExt {
                 id: sfin.id.clone(),
                 posted_timestamp: unix_to_rfc3339(sfin.posted),
@@ -195,7 +204,9 @@ pub fn unified_transaction_to_fdx(txn: &UnifiedTransaction) -> FdxTransaction {
             posted_timestamp: date_to_rfc3339(&lf.date),
             transaction_timestamp: None,
             amount: lf.amount,
-            description: lf.merchant.as_deref()
+            description: lf
+                .merchant
+                .as_deref()
                 .or(lf.description.as_deref())
                 .unwrap_or("(no description)")
                 .to_string(),
@@ -293,7 +304,13 @@ mod tests {
             status: "matched".to_string(),
             match_confidence: Some(0.85),
             rec_id: Some(42),
-            simplefin: Some(sfin_view("TRN-001", 1_705_276_800, "-311.92", "AUTOPAY PAYMENT", false)),
+            simplefin: Some(sfin_view(
+                "TRN-001",
+                1_705_276_800,
+                "-311.92",
+                "AUTOPAY PAYMENT",
+                false,
+            )),
             lunchflow: Some(lf_view("lf-001", -311.92, "2024-01-15", Some("Payment"))),
             sort_ts: 1_705_276_800,
         };
@@ -306,11 +323,15 @@ mod tests {
         assert_eq!(fdx.reconciliation_status.as_deref(), Some("matched"));
         assert_eq!(fdx.match_confidence, Some(0.85));
 
-        let sfin_ext = fdx.simplefin_transaction.expect("simplefin_transaction should be present");
+        let sfin_ext = fdx
+            .simplefin_transaction
+            .expect("simplefin_transaction should be present");
         assert_eq!(sfin_ext.id, "TRN-001");
         assert_eq!(sfin_ext.amount, -311.92);
 
-        let lf_ext = fdx.lunchflow_transaction.expect("lunchflow_transaction should be present");
+        let lf_ext = fdx
+            .lunchflow_transaction
+            .expect("lunchflow_transaction should be present");
         assert_eq!(lf_ext.id, "lf-001");
         assert_eq!(lf_ext.date, "2024-01-15");
     }
@@ -321,8 +342,19 @@ mod tests {
             status: "matched".to_string(),
             match_confidence: Some(1.0),
             rec_id: None, // edge case: row exists but id not populated
-            simplefin: Some(sfin_view("TRN-002", 1_705_276_800, "-28.11", "CLOUD WORKSPACE", false)),
-            lunchflow: Some(lf_view("lf-002", -28.11, "2024-01-14", Some("Cloud Workspace"))),
+            simplefin: Some(sfin_view(
+                "TRN-002",
+                1_705_276_800,
+                "-28.11",
+                "CLOUD WORKSPACE",
+                false,
+            )),
+            lunchflow: Some(lf_view(
+                "lf-002",
+                -28.11,
+                "2024-01-14",
+                Some("Cloud Workspace"),
+            )),
             sort_ts: 1_705_276_800,
         };
         let fdx = unified_transaction_to_fdx(&txn);
@@ -342,7 +374,13 @@ mod tests {
             status: "sfin_only".to_string(),
             match_confidence: None,
             rec_id: Some(99),
-            simplefin: Some(sfin_view("TRN-LULU", 1_705_276_800, "72.00", "LULULEMON RETURN", false)),
+            simplefin: Some(sfin_view(
+                "TRN-LULU",
+                1_705_276_800,
+                "72.00",
+                "LULULEMON RETURN",
+                false,
+            )),
             lunchflow: None,
             sort_ts: 1_705_276_800,
         };
@@ -352,7 +390,10 @@ mod tests {
         assert_eq!(fdx.amount, 72.00);
         assert_eq!(fdx.debit_credit_memo, "CREDIT");
         assert_eq!(fdx.reconciliation_status.as_deref(), Some("sfin_only"));
-        assert!(fdx.simplefin_transaction.is_none(), "no nested ref for sfin_only");
+        assert!(
+            fdx.simplefin_transaction.is_none(),
+            "no nested ref for sfin_only"
+        );
         assert!(fdx.lunchflow_transaction.is_none());
     }
 
@@ -428,7 +469,13 @@ mod tests {
             status: "sfin_only".to_string(),
             match_confidence: None,
             rec_id: None,
-            simplefin: Some(sfin_view("TRN-REF", 1_705_276_800, "499.00", "BENEFIT REIMBURSEMENT", false)),
+            simplefin: Some(sfin_view(
+                "TRN-REF",
+                1_705_276_800,
+                "499.00",
+                "BENEFIT REIMBURSEMENT",
+                false,
+            )),
             lunchflow: None,
             sort_ts: 1_705_276_800,
         };

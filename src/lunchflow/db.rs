@@ -143,11 +143,9 @@ pub struct LfAccountFull {
 /// Load every LunchFlow account. Used in LunchFlow-only mode where
 /// reconciliation never runs and all accounts should be exposed.
 pub async fn get_all_lf_accounts(pool: &SqlitePool) -> Result<Vec<LfAccountFull>, sqlx::Error> {
-    let rows = sqlx::query(
-        "SELECT id, name, currency, balance, fetched_at FROM lf_accounts",
-    )
-    .fetch_all(pool)
-    .await?;
+    let rows = sqlx::query("SELECT id, name, currency, balance, fetched_at FROM lf_accounts")
+        .fetch_all(pool)
+        .await?;
 
     Ok(rows
         .into_iter()
@@ -161,18 +159,16 @@ pub async fn get_all_lf_accounts(pool: &SqlitePool) -> Result<Vec<LfAccountFull>
         .collect())
 }
 
-
 /// Fetch a single LunchFlow account by its numeric id.
 pub async fn get_lf_account(
     pool: &SqlitePool,
     id: i64,
 ) -> Result<Option<LfAccountFull>, sqlx::Error> {
-    let row = sqlx::query(
-        "SELECT id, name, currency, balance, fetched_at FROM lf_accounts WHERE id = ?",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?;
+    let row =
+        sqlx::query("SELECT id, name, currency, balance, fetched_at FROM lf_accounts WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?;
 
     Ok(row.map(|r| LfAccountFull {
         id: r.get("id"),
@@ -191,8 +187,12 @@ pub async fn get_lf_transactions_raw(
     start_ts: Option<i64>,
     end_ts: Option<i64>,
 ) -> Result<Vec<LfTransactionRow>, sqlx::Error> {
-    let from = start_ts.map(util::unix_to_date_str).unwrap_or_else(|| "0000-01-01".to_string());
-    let to = end_ts.map(util::unix_to_date_str).unwrap_or_else(|| "9999-12-31".to_string());
+    let from = start_ts
+        .map(util::unix_to_date_str)
+        .unwrap_or_else(|| "0000-01-01".to_string());
+    let to = end_ts
+        .map(util::unix_to_date_str)
+        .unwrap_or_else(|| "9999-12-31".to_string());
 
     let rows = sqlx::query(
         r#"
@@ -281,8 +281,12 @@ pub async fn get_unified_transactions(
     let end = end_ts.unwrap_or(i64::MAX);
 
     // Derive YYYY-MM-DD bounds for the LunchFlow side.
-    let lf_from = start_ts.map(util::unix_to_date_str).unwrap_or_else(|| "0000-01-01".to_string());
-    let lf_to = end_ts.map(util::unix_to_date_str).unwrap_or_else(|| "9999-12-31".to_string());
+    let lf_from = start_ts
+        .map(util::unix_to_date_str)
+        .unwrap_or_else(|| "0000-01-01".to_string());
+    let lf_to = end_ts
+        .map(util::unix_to_date_str)
+        .unwrap_or_else(|| "9999-12-31".to_string());
 
     // Find the matched LunchFlow account for this SimpleFIN account (if any).
     let lf_account_id: Option<i64> = sqlx::query(
@@ -519,16 +523,11 @@ pub async fn insert_user_account_rule(
     Ok(row.get("id"))
 }
 
-pub async fn delete_user_account_rule(
-    pool: &SqlitePool,
-    id: i64,
-) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query(
-        "DELETE FROM user_account_reconciliation WHERE id = ?",
-    )
-    .bind(id)
-    .execute(pool)
-    .await?;
+pub async fn delete_user_account_rule(pool: &SqlitePool, id: i64) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query("DELETE FROM user_account_reconciliation WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
 
     Ok(result.rows_affected() > 0)
 }
@@ -589,9 +588,7 @@ pub async fn upsert_name_preference(
 
 /// Return all rows from `reconciled_accounts`, joined with account names and
 /// the current name preference (if any).
-pub async fn get_account_matches(
-    pool: &SqlitePool,
-) -> Result<Vec<AccountMatchRow>, sqlx::Error> {
+pub async fn get_account_matches(pool: &SqlitePool) -> Result<Vec<AccountMatchRow>, sqlx::Error> {
     let rows = sqlx::query(
         r#"
         SELECT
