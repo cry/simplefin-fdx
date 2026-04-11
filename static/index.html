@@ -525,13 +525,119 @@
     .confidence { font-variant-numeric: tabular-nums; }
 
     tbody td.text-right { font-variant-numeric: tabular-nums; }
+
+    /* ── Mobile ── */
+    #mobile-topbar {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      z-index: 100;
+      background: var(--sidebar-bg);
+      border-bottom: 1px solid var(--sidebar-border);
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+    }
+
+    #mobile-topbar .mobile-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--sidebar-text);
+    }
+
+    #menu-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--sidebar-text);
+      font-size: 20px;
+      line-height: 1;
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+      transition: background 150ms ease;
+    }
+
+    #menu-btn:hover { background: var(--sidebar-hover); }
+
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      top: 52px;
+      background: oklch(0% 0 0 / 40%);
+      backdrop-filter: blur(1px);
+      z-index: 150;
+    }
+
+    @media (max-width: 640px) {
+      #mobile-topbar { display: flex; }
+      #sidebar-overlay { display: block; }
+
+      html, body { height: 100%; overflow: hidden; }
+      #layout { height: calc(100% - 52px); margin-top: 52px; }
+
+      #sidebar {
+        position: fixed;
+        top: 52px;
+        left: 0;
+        bottom: 0;
+        z-index: 200;
+        width: 280px;
+        transform: translateX(-100%);
+        transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      #sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 32px oklch(0% 0 0 / 30%);
+      }
+
+      #main { width: 100%; min-width: 0; }
+
+      #main-header { padding: 14px 16px 0; }
+      #main-header h2 { font-size: 16px; }
+
+      #content { padding: 12px 16px; overflow-x: auto; }
+
+      table { min-width: 480px; }
+
+      .filter-bar { gap: 8px; }
+      .filter-bar input[type="date"] { font-size: 12px; padding: 4px 6px; }
+
+      .modal { padding: 16px; border-radius: var(--radius); }
+      .modal-match-row { flex-wrap: wrap; gap: 8px; }
+
+      .recon-form { flex-direction: column; }
+      .recon-form select, .recon-form input { min-width: 0; width: 100%; }
+
+      .inline-link-form { flex-wrap: wrap; }
+      .inline-link-form select { flex: 1; min-width: 0; }
+
+      .pagination { flex-wrap: wrap; justify-content: center; }
+
+      .balance-row { font-size: 12px; }
+    }
   </style>
 </head>
 <body x-data="app()" x-init="init()">
+
+  <!-- Mobile top bar -->
+  <div id="mobile-topbar">
+    <button id="menu-btn" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen" aria-label="Toggle menu">
+      <span x-text="sidebarOpen ? '✕' : '☰'"></span>
+    </button>
+    <span class="mobile-title">SimpleFIN</span>
+  </div>
+
   <div id="layout">
 
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" x-show="sidebarOpen" @click="sidebarOpen = false" style="display:none"></div>
+
     <!-- Sidebar -->
-    <div id="sidebar">
+    <div id="sidebar" :class="{ open: sidebarOpen }">
       <div id="sidebar-header">
         <h1>SimpleFIN</h1>
         <div id="status" :class="{ error: statusError }" x-text="status"></div>
@@ -637,7 +743,7 @@
                     <tbody>
                       <tr class="tx-clickable" @click="openTxDetail(tx)">
                         <td class="text-nowrap">
-                          <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
+                          <span x-text="fmtDateShort(txDate(tx))"></span>
                           <template x-if="tx.status === 'PENDING'">
                             <div style="font-size:11px;color:var(--muted)">authorized</div>
                           </template>
@@ -728,7 +834,7 @@
                       <tbody>
                         <tr class="tx-clickable" @click="openTxDetail(tx)">
                           <td class="text-nowrap">
-                            <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
+                            <span x-text="fmtDateShort(txDate(tx))"></span>
                             <template x-if="tx.status === 'PENDING'">
                               <div style="font-size:11px;color:var(--muted)">authorized</div>
                             </template>
@@ -1038,7 +1144,7 @@
           <div>
             <h3 class="modal-title" x-text="txDetail.payee || txDetail.description"></h3>
             <div class="modal-subtitle">
-              <span x-text="fmtDate(txDetail.status === 'PENDING' ? txDetail.transactionTimestamp : txDetail.postedTimestamp)"></span>
+              <span x-text="fmtDate(txDate(txDetail))"></span>
               &nbsp;·&nbsp;
               <span :class="txDetail.debitCreditMemo === 'CREDIT' ? 'credit' : 'debit'"
                 x-text="(txDetail.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(txDetail.amount, txDetail._currency)"></span>
@@ -1173,6 +1279,7 @@
       return {
         // Nav
         view: 'overview',
+        sidebarOpen: false,
 
         // Accounts
         accounts: [],
@@ -1348,7 +1455,7 @@
           this.refreshStatus();
           this.loadAccounts();
           setInterval(() => this.refreshStatus(), 60_000);
-          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.txDetail = null; });
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { this.txDetail = null; this.sidebarOpen = false; } });
         },
 
         async refreshStatus() {
@@ -1382,6 +1489,7 @@
         },
 
         async selectOverview() {
+          this.sidebarOpen = false;
           this.view = 'overview';
           this.selected = null;
           this.overviewPage = 0;
@@ -1391,6 +1499,7 @@
         },
 
         async selectAccount(acct) {
+          this.sidebarOpen = false;
           this.view = 'account';
           this.selected = acct;
           this.tab = 'transactions';
@@ -1510,6 +1619,7 @@
         },
 
         async selectReconciliation() {
+          this.sidebarOpen = false;
           this.view = 'reconciliation';
           this.selected = null;
           await this.loadReconciliationData();
@@ -1654,6 +1764,19 @@
             style: 'currency',
             currency: currency ?? 'USD',
           }).format(amount);
+        },
+
+        // Returns the best displayable date for a transaction, preferring the
+        // structurally correct field but falling back to the other when it
+        // contains epoch (1970) or is absent, then to the nested LunchFlow date.
+        txDate(tx) {
+          const ok = iso => !!iso && new Date(iso).getFullYear() > 1970;
+          const a = tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp;
+          const b = tx.status === 'PENDING' ? tx.postedTimestamp : tx.transactionTimestamp;
+          if (ok(a)) return a;
+          if (ok(b)) return b;
+          if (ok(tx.lunchflowTransaction?.date)) return tx.lunchflowTransaction.date;
+          return a;
         },
 
         fmtDate(iso) {
