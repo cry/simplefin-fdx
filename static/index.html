@@ -246,39 +246,8 @@
       color: var(--muted);
     }
 
-    /* ── Expandable reconciled transactions ── */
-    .tx-expandable { cursor: pointer; }
-    .tx-expandable:hover { background: var(--hover); }
-
-    .tx-expand-icon {
-      display: inline-block;
-      width: 14px;
-      font-size: 10px;
-      color: var(--muted);
-      margin-right: 2px;
-      transition: transform 0.15s;
-      vertical-align: middle;
-    }
-
-    .tx-source-row > td {
-      background: #f4f6ff;
-      padding: 8px 12px 8px 28px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .source-txns {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .source-item {
-      display: grid;
-      grid-template-columns: 80px 80px 1fr auto;
-      align-items: center;
-      gap: 12px;
-      font-size: 12px;
-    }
+    .tx-clickable { cursor: pointer; }
+    .tx-clickable:hover { background: var(--hover); }
 
     .source-label {
       font-size: 10px;
@@ -294,8 +263,107 @@
     .source-label.sfin { background: #dbeafe; color: #1d4ed8; }
     .source-label.lf   { background: #dcfce7; color: #166534; }
 
-    .source-desc { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .source-amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    /* ── Transaction detail modal ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      width: 680px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
+    .modal-subtitle { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--muted);
+      padding: 0 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal-sources {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .modal-sources { grid-template-columns: 1fr; }
+    }
+
+    .modal-source-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .modal-source-card .source-label {
+      margin-bottom: 10px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .detail-row:last-child { border-bottom: none; }
+
+    .detail-key {
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .detail-val {
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .modal-match-row {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .modal-match-row strong { color: var(--text); }
 
     /* ── Reconciliation management ── */
     .recon-stat {
@@ -508,10 +576,7 @@
                   </thead>
                   <template x-for="tx in overviewPagedItems" :key="tx.transactionId">
                     <tbody>
-                      <tr
-                        :class="{ 'tx-expandable': tx.reconciliationStatus === 'matched' }"
-                        @click="tx.reconciliationStatus === 'matched' && toggleExpand(tx.transactionId)"
-                      >
+                      <tr class="tx-clickable" @click="openTxDetail(tx)">
                         <td class="text-nowrap">
                           <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
                           <template x-if="tx.status === 'PENDING'">
@@ -521,9 +586,6 @@
                         <td class="text-nowrap" style="color:var(--muted)" x-text="tx._accountName"></td>
                         <td>
                           <div>
-                            <template x-if="tx.reconciliationStatus === 'matched'">
-                              <span class="tx-expand-icon" x-text="expandedTxns[tx.transactionId] ? '▼' : '▶'"></span>
-                            </template>
                             <span x-text="tx.payee || tx.description"></span>
                             <template x-if="tx.status === 'PENDING'">
                               <span class="badge">pending</span>
@@ -536,30 +598,6 @@
                         <td class="text-right text-nowrap"
                             :class="tx.debitCreditMemo === 'CREDIT' ? 'credit' : 'debit'"
                             x-text="(tx.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(tx.amount, tx._currency)">
-                        </td>
-                      </tr>
-                      <tr x-show="expandedTxns[tx.transactionId]" class="tx-source-row">
-                        <td colspan="4">
-                          <div class="source-txns">
-                            <template x-if="tx.simplefinTransaction">
-                              <div class="source-item">
-                                <span class="source-label sfin">SimpleFIN</span>
-                                <span x-text="fmtDateShort(tx.simplefinTransaction.postedTimestamp)"></span>
-                                <span class="source-desc" x-text="tx.simplefinTransaction.payee || tx.simplefinTransaction.description || '—'"></span>
-                                <span class="source-amount" :class="tx.simplefinTransaction.amount < 0 ? 'debit' : 'credit'"
-                                  x-text="(tx.simplefinTransaction.amount >= 0 ? '+' : '') + fmt(tx.simplefinTransaction.amount, tx._currency)"></span>
-                              </div>
-                            </template>
-                            <template x-if="tx.lunchflowTransaction">
-                              <div class="source-item">
-                                <span class="source-label lf">LunchFlow</span>
-                                <span x-text="fmtDate(tx.lunchflowTransaction.date)"></span>
-                                <span class="source-desc" x-text="tx.lunchflowTransaction.merchant || tx.lunchflowTransaction.description || '—'"></span>
-                                <span class="source-amount" :class="tx.lunchflowTransaction.amount < 0 ? 'debit' : 'credit'"
-                                  x-text="(tx.lunchflowTransaction.amount >= 0 ? '+' : '') + fmt(tx.lunchflowTransaction.amount, tx._currency)"></span>
-                              </div>
-                            </template>
-                          </div>
                         </td>
                       </tr>
                     </tbody>
@@ -629,10 +667,7 @@
                     </thead>
                     <template x-for="tx in transactions" :key="tx.transactionId">
                       <tbody>
-                        <tr
-                          :class="{ 'tx-expandable': tx.reconciliationStatus === 'matched' }"
-                          @click="tx.reconciliationStatus === 'matched' && toggleExpand(tx.transactionId)"
-                        >
+                        <tr class="tx-clickable" @click="openTxDetail(tx)">
                           <td class="text-nowrap">
                             <span x-text="fmtDateShort(tx.status === 'PENDING' ? tx.transactionTimestamp : tx.postedTimestamp)"></span>
                             <template x-if="tx.status === 'PENDING'">
@@ -641,9 +676,6 @@
                           </td>
                           <td>
                             <div>
-                              <template x-if="tx.reconciliationStatus === 'matched'">
-                                <span class="tx-expand-icon" x-text="expandedTxns[tx.transactionId] ? '▼' : '▶'"></span>
-                              </template>
                               <span x-text="tx.payee || tx.description"></span>
                               <template x-if="tx.status === 'PENDING'">
                                 <span class="badge">pending</span>
@@ -656,30 +688,6 @@
                           <td class="text-right text-nowrap"
                               :class="tx.debitCreditMemo === 'CREDIT' ? 'credit' : 'debit'"
                               x-text="(tx.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(tx.amount, selected.currency?.currencyCode)">
-                          </td>
-                        </tr>
-                        <tr x-show="expandedTxns[tx.transactionId]" class="tx-source-row">
-                          <td colspan="3">
-                            <div class="source-txns">
-                              <template x-if="tx.simplefinTransaction">
-                                <div class="source-item">
-                                  <span class="source-label sfin">SimpleFIN</span>
-                                  <span x-text="fmtDateShort(tx.simplefinTransaction.postedTimestamp)"></span>
-                                  <span class="source-desc" x-text="tx.simplefinTransaction.payee || tx.simplefinTransaction.description || '—'"></span>
-                                  <span class="source-amount" :class="tx.simplefinTransaction.amount < 0 ? 'debit' : 'credit'"
-                                    x-text="(tx.simplefinTransaction.amount >= 0 ? '+' : '') + fmt(tx.simplefinTransaction.amount, selected.currency?.currencyCode)"></span>
-                                </div>
-                              </template>
-                              <template x-if="tx.lunchflowTransaction">
-                                <div class="source-item">
-                                  <span class="source-label lf">LunchFlow</span>
-                                  <span x-text="fmtDate(tx.lunchflowTransaction.date)"></span>
-                                  <span class="source-desc" x-text="tx.lunchflowTransaction.merchant || tx.lunchflowTransaction.description || '—'"></span>
-                                  <span class="source-amount" :class="tx.lunchflowTransaction.amount < 0 ? 'debit' : 'credit'"
-                                    x-text="(tx.lunchflowTransaction.amount >= 0 ? '+' : '') + fmt(tx.lunchflowTransaction.amount, selected.currency?.currencyCode)"></span>
-                                </div>
-                              </template>
-                            </div>
                           </td>
                         </tr>
                       </tbody>
@@ -963,6 +971,141 @@
     </div>
   </div>
 
+  <!-- Transaction detail modal -->
+  <template x-if="txDetail">
+    <div class="modal-backdrop" @click.self="txDetail = null">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title" x-text="txDetail.payee || txDetail.description"></h3>
+            <div class="modal-subtitle">
+              <span x-text="fmtDate(txDetail.status === 'PENDING' ? txDetail.transactionTimestamp : txDetail.postedTimestamp)"></span>
+              &nbsp;·&nbsp;
+              <span :class="txDetail.debitCreditMemo === 'CREDIT' ? 'credit' : 'debit'"
+                x-text="(txDetail.debitCreditMemo === 'CREDIT' ? '+' : '') + fmt(txDetail.amount, txDetail._currency)"></span>
+              <template x-if="txDetail.status === 'PENDING'">
+                <span class="badge">pending</span>
+              </template>
+            </div>
+          </div>
+          <button class="modal-close" @click="txDetail = null">✕</button>
+        </div>
+
+        <div class="modal-sources">
+          <!-- SimpleFIN side -->
+          <div class="modal-source-card">
+            <span class="source-label sfin">SimpleFIN</span>
+            <template x-if="txDetail.simplefinTransaction">
+              <div style="margin-top:10px">
+                <template x-if="txDetail.simplefinTransaction.payee">
+                  <div class="detail-row">
+                    <span class="detail-key">Payee</span>
+                    <span class="detail-val" x-text="txDetail.simplefinTransaction.payee"></span>
+                  </div>
+                </template>
+                <template x-if="txDetail.simplefinTransaction.description">
+                  <div class="detail-row">
+                    <span class="detail-key">Description</span>
+                    <span class="detail-val" x-text="txDetail.simplefinTransaction.description"></span>
+                  </div>
+                </template>
+                <template x-if="txDetail.simplefinTransaction.memo">
+                  <div class="detail-row">
+                    <span class="detail-key">Memo</span>
+                    <span class="detail-val" x-text="txDetail.simplefinTransaction.memo"></span>
+                  </div>
+                </template>
+                <div class="detail-row">
+                  <span class="detail-key">Amount</span>
+                  <span class="detail-val" :class="txDetail.simplefinTransaction.amount < 0 ? 'debit' : 'credit'"
+                    x-text="(txDetail.simplefinTransaction.amount >= 0 ? '+' : '') + fmt(txDetail.simplefinTransaction.amount, txDetail._currency)"></span>
+                </div>
+                <template x-if="txDetail.simplefinTransaction.postedTimestamp">
+                  <div class="detail-row">
+                    <span class="detail-key">Posted</span>
+                    <span class="detail-val" x-text="fmtDate(txDetail.simplefinTransaction.postedTimestamp)"></span>
+                  </div>
+                </template>
+                <template x-if="txDetail.simplefinTransaction.transactionTimestamp">
+                  <div class="detail-row">
+                    <span class="detail-key">Authorized</span>
+                    <span class="detail-val" x-text="fmtDate(txDetail.simplefinTransaction.transactionTimestamp)"></span>
+                  </div>
+                </template>
+                <div class="detail-row">
+                  <span class="detail-key">Status</span>
+                  <span class="detail-val" x-text="txDetail.simplefinTransaction.status ?? '—'"></span>
+                </div>
+                <template x-if="txDetail.simplefinTransaction.transactionId">
+                  <div class="detail-row">
+                    <span class="detail-key">ID</span>
+                    <span class="detail-val" style="font-size:11px;font-family:monospace" x-text="txDetail.simplefinTransaction.transactionId"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="!txDetail.simplefinTransaction">
+              <div style="margin-top:10px;color:var(--muted);font-size:13px">No SimpleFIN transaction.</div>
+            </template>
+          </div>
+
+          <!-- LunchFlow side -->
+          <div class="modal-source-card">
+            <span class="source-label lf">LunchFlow</span>
+            <template x-if="txDetail.lunchflowTransaction">
+              <div style="margin-top:10px">
+                <template x-if="txDetail.lunchflowTransaction.merchant">
+                  <div class="detail-row">
+                    <span class="detail-key">Merchant</span>
+                    <span class="detail-val" x-text="txDetail.lunchflowTransaction.merchant"></span>
+                  </div>
+                </template>
+                <template x-if="txDetail.lunchflowTransaction.description">
+                  <div class="detail-row">
+                    <span class="detail-key">Description</span>
+                    <span class="detail-val" x-text="txDetail.lunchflowTransaction.description"></span>
+                  </div>
+                </template>
+                <div class="detail-row">
+                  <span class="detail-key">Amount</span>
+                  <span class="detail-val" :class="txDetail.lunchflowTransaction.amount < 0 ? 'debit' : 'credit'"
+                    x-text="(txDetail.lunchflowTransaction.amount >= 0 ? '+' : '') + fmt(txDetail.lunchflowTransaction.amount, txDetail._currency)"></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Date</span>
+                  <span class="detail-val" x-text="fmtDate(txDetail.lunchflowTransaction.date)"></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Pending</span>
+                  <span class="detail-val" x-text="txDetail.lunchflowTransaction.isPending ? 'Yes' : 'No'"></span>
+                </div>
+                <template x-if="txDetail.lunchflowTransaction.transactionId">
+                  <div class="detail-row">
+                    <span class="detail-key">ID</span>
+                    <span class="detail-val" style="font-size:11px;font-family:monospace" x-text="txDetail.lunchflowTransaction.transactionId"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="!txDetail.lunchflowTransaction">
+              <div style="margin-top:10px;color:var(--muted);font-size:13px">No LunchFlow transaction.</div>
+            </template>
+          </div>
+        </div>
+
+        <div class="modal-match-row">
+          <span>Status: <strong x-text="txDetail.reconciliationStatus ?? '—'"></strong></span>
+          <template x-if="txDetail.matchConfidence != null">
+            <span>Match confidence: <strong x-text="Math.round(txDetail.matchConfidence * 100) + '%'"></strong></span>
+          </template>
+          <template x-if="txDetail.transactionId">
+            <span style="margin-left:auto;font-size:11px;font-family:monospace;color:var(--muted)" x-text="txDetail.transactionId"></span>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+
   <script>
     const PAGE_SIZE = 30;
     const OVERVIEW_DAYS = 90;
@@ -988,8 +1131,8 @@
         startDate: '',
         endDate: '',
 
-        // Expanded reconciled transaction rows (keyed by transactionId)
-        expandedTxns: {},
+        // Transaction detail modal
+        txDetail: null,
 
         // Overview
         overviewPending: [],
@@ -1146,6 +1289,7 @@
           this.refreshStatus();
           this.loadAccounts();
           setInterval(() => this.refreshStatus(), 60_000);
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.txDetail = null; });
         },
 
         async refreshStatus() {
@@ -1413,10 +1557,37 @@
           await this.loadAccounts();
         },
 
-        toggleExpand(id) {
-          this.expandedTxns = this.expandedTxns[id]
-            ? Object.fromEntries(Object.entries(this.expandedTxns).filter(([k]) => k !== id))
-            : { ...this.expandedTxns, [id]: true };
+        openTxDetail(tx) {
+          const accountId = tx._accountId ?? this.selected?.accountId ?? '';
+          const currency = tx._currency ?? this.selected?.currency?.currencyCode ?? 'USD';
+          const detail = { ...tx, _accountId: accountId, _currency: currency };
+
+          if (tx.reconciliationStatus !== 'matched') {
+            const isLf = tx.reconciliationStatus === 'lf_only' || accountId.startsWith('LUNCHFLOW-');
+            if (isLf) {
+              detail.lunchflowTransaction = {
+                merchant: tx.payee || null,
+                description: tx.description || null,
+                amount: tx.amount,
+                date: (tx.postedTimestamp ?? tx.transactionTimestamp ?? '').slice(0, 10) || null,
+                isPending: tx.status === 'PENDING',
+                transactionId: tx.transactionId,
+              };
+            } else {
+              detail.simplefinTransaction = {
+                payee: tx.payee || null,
+                description: tx.description || null,
+                memo: tx.memo || null,
+                amount: tx.amount,
+                postedTimestamp: tx.postedTimestamp || null,
+                transactionTimestamp: tx.transactionTimestamp || null,
+                status: tx.status,
+                transactionId: tx.transactionId,
+              };
+            }
+          }
+
+          this.txDetail = detail;
         },
 
         fmt(amount, currency) {
