@@ -4,8 +4,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-use super::{db as lf_db, reconciler};
-use crate::{db, state::SharedState, util};
+use crate::{db, lunchflow::db as lf_db, reconciler, state::SharedState, util};
 
 const LF_LAST_FETCHED_KEY: &str = "lf_last_fetched";
 

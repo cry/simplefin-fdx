@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod fdx;
 mod lunchflow;
+mod reconciler;
 mod simplefin;
 mod state;
 mod util;
@@ -56,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if simplefin_configured && lunchflow_configured {
-        if let Err(e) = lunchflow::reconciler::run(&pool).await {
+        if let Err(e) = reconciler::run(&pool).await {
             warn!(error = %e, "Startup reconciliation failed");
         }
     }

@@ -535,7 +535,7 @@ pub async fn delete_reconciliation_rule(
 }
 
 pub async fn run_reconciliation(State(app): State<AppState>) -> Result<StatusCode, AppError> {
-    crate::lunchflow::reconciler::run(&app.pool).await?;
+    crate::reconciler::run(&app.pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
