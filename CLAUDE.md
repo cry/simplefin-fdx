@@ -16,7 +16,6 @@ cargo run
 | `FETCH_INTERVAL_SECS` | `3600` | Seconds between polls. Applies to both fetchers. |
 | `SERVER_ADDR` | `0.0.0.0:8080` | TCP address the HTTP server binds to. |
 | `DATABASE_URL` | `sqlite://ledger-hub.db` | SQLite connection string. The file is created automatically. |
-</not_new_text>
 
 | `START_DATE_DAYS_BACK` | `90` | Days of history to fetch on the very first run. Applies to both SimpleFIN and LunchFlow. |
 
@@ -114,7 +113,7 @@ Runs in `lunchflow/reconciler.rs` after each successful LunchFlow fetch cycle.
 - Scores by date proximity (exact +0.4, ±1d +0.25, ±2d +0.15, ±3d +0.1, ±4-5d +0.05) and description/merchant substring match (+0.15).
 - Pairs scoring ≥ 0.6 → `status = 'matched'` in `reconciled_transactions`; unmatched → `sfin_only` or `lf_only`.
 
-Reconciliation status values exposed in API responses: `"matched"` | `"sfin_only"` | `"lf_only"` | `"unreconciled"` (before reconciliation has run).
+Reconciliation status values exposed in API responses: "matched" | "sfin_only" | "lf_only" | "unreconciled" (before reconciliation has run).
 
 ## SimpleFIN client notes
 
@@ -132,7 +131,7 @@ Reconciliation status values exposed in API responses: `"matched"` | `"sfin_only
 - `get_balance(account_id)` → `Balance` (amount: f64, currency).
 - `get_transactions(account_id, TransactionParams)` → `Vec<Transaction>` (id: Option<String>, amount: f64, date: "YYYY-MM-DD", merchant, description, is_pending).
 - `get_holdings(account_id)` → `Holdings`; returns `Error::HoldingsNotSupported` for non-investment accounts.
-- Pending transactions have `id: None`; a synthetic key `"lf_pending_{account_id}_{date}"` is generated for upsert.
+- Pending transactions have `id: None`; a synthetic key "lf_pending_{account_id}_{date}"` is generated for upsert.
 
 ## OpenAPI spec
 

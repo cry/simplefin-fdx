@@ -1,16 +1,20 @@
 use lunchflow::{LunchFlowClient, TransactionParams, models::AccountStatus};
 use sqlx::SqlitePool;
-use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-use crate::{db, lunchflow::db as lf_db, reconciler, state::SharedState, util};
+use crate::{
+    fetcher_loop::{FetcherLoop, run_loop},
+    lunchflow::db as lf_db,
+    reconciler,
+    state::SharedState,
+    util,
+};
 
 const LF_LAST_FETCHED_KEY: &str = "lf_last_fetched";
 
 /// Fetch all accounts, balances, transactions, and holdings from LunchFlow,
 /// then trigger reconciliation against the SimpleFIN data already in the DB.
-async fn do_fetch(
+async fn lf_fetch(
     client: &LunchFlowClient,
     pool: &SqlitePool,
     from_ts: i64,
@@ -90,6 +94,53 @@ async fn do_fetch(
     Ok(())
 }
 
+struct LunchFlowFetcher {
+    client: LunchFlowClient,
+}
+
+impl FetcherLoop for LunchFlowFetcher {
+    fn name(&self) -> &'static str {
+        "LunchFlow"
+    }
+
+    fn last_fetched_db_key(&self) -> &'static str {
+        LF_LAST_FETCHED_KEY
+    }
+
+    // next_start_db_key left as default (None) — LunchFlow derives from_ts
+    // from last_fetched directly.
+
+    async fn do_fetch(
+        &self,
+        pool: &SqlitePool,
+        _state: &SharedState,
+        from_ts: i64,
+        now: i64,
+    ) -> Result<(), String> {
+        lf_fetch(&self.client, pool, from_ts, now).await
+    }
+
+    async fn restore_last_fetched(&self, state: &SharedState, ts: i64) {
+        state.write().await.lf_last_fetched = Some(ts);
+    }
+
+    async fn on_success(&self, state: &SharedState, now: i64) {
+        let mut s = state.write().await;
+        s.lf_last_fetched = Some(now);
+        s.lf_fetch_error = None;
+    }
+
+    async fn on_failure(&self, state: &SharedState, error: String) {
+        state.write().await.lf_fetch_error = Some(error);
+    }
+
+    async fn post_fetch_success(&self, pool: &SqlitePool, _state: &SharedState) {
+        if let Err(e) = reconciler::run(pool).await {
+            warn!("Reconciliation failed: {e}");
+        }
+    }
+}
+
 pub async fn run(
     pool: SqlitePool,
     shared: SharedState,
@@ -105,64 +156,12 @@ pub async fn run(
         }
     };
 
-    // Restore last fetch time into SharedState so /health is accurate immediately.
-    let last_fetched: Option<i64> = db::get_config(&pool, LF_LAST_FETCHED_KEY)
-        .await
-        .ok()
-        .flatten()
-        .and_then(|s| s.parse().ok());
-
-    if let Some(ts) = last_fetched {
-        shared.write().await.lf_last_fetched = Some(ts);
-    }
-
-    let mut from_ts: i64 = last_fetched
-        .map(|ts| ts - 86_400) // 24 h overlap to catch late-arriving transactions
-        .unwrap_or_else(|| util::now_unix() - (start_date_days_back as i64 * 86_400));
-
-    // If we restarted before the next interval, wait out the remainder.
-    if let Some(ts) = last_fetched {
-        let elapsed = (util::now_unix() - ts).max(0) as u64;
-        if elapsed < fetch_interval_secs {
-            let wait = fetch_interval_secs - elapsed;
-            info!(
-                wait_secs = wait,
-                "LunchFlow fetcher: waiting until next scheduled fetch"
-            );
-            sleep(Duration::from_secs(wait)).await;
-        }
-    }
-
-    loop {
-        let now = util::now_unix();
-        info!(from = from_ts, to = now, "LunchFlow fetch cycle starting");
-
-        match do_fetch(&client, &pool, from_ts, now).await {
-            Ok(()) => {
-                info!("LunchFlow fetch cycle complete");
-                {
-                    let mut s = shared.write().await;
-                    s.lf_last_fetched = Some(now);
-                    s.lf_fetch_error = None;
-                }
-                from_ts = now - 86_400;
-
-                if let Err(e) = db::set_config(&pool, LF_LAST_FETCHED_KEY, &now.to_string()).await {
-                    warn!("Failed to persist lf_last_fetched: {e}");
-                }
-
-                // Run reconciliation now that both data sources are up to date.
-                if let Err(e) = reconciler::run(&pool).await {
-                    warn!("Reconciliation failed: {e}");
-                }
-            }
-            Err(e) => {
-                error!("LunchFlow fetch cycle failed: {e}");
-                shared.write().await.lf_fetch_error = Some(e);
-                // from_ts unchanged so we retry the same window next cycle.
-            }
-        }
-
-        sleep(Duration::from_secs(fetch_interval_secs)).await;
-    }
+    run_loop(
+        LunchFlowFetcher { client },
+        pool,
+        shared,
+        fetch_interval_secs,
+        start_date_days_back,
+    )
+    .await;
 }

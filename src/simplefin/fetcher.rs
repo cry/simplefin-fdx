@@ -1,14 +1,12 @@
 use simplefin::client::{AccountsRequest, SimpleFINClient};
 use sqlx::SqlitePool;
-use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 use crate::{
     db::{get_config, set_config},
+    fetcher_loop::{FetcherLoop, run_loop},
     simplefin::db::{load_accounts, upsert_account, upsert_holding, upsert_transaction},
     state::{CachedAccount, SharedState},
-    util,
 };
 
 const ACCESS_URL_KEY: &str = "access_url";
@@ -67,7 +65,7 @@ fn sfin_account_to_cached(account: &simplefin::models::Account) -> CachedAccount
 
 /// Fetch a single window (guaranteed ≤ 90 days). Writes accounts and transactions to
 /// the DB and updates the in-memory account list. Does NOT update `last_fetched`.
-async fn do_fetch(
+async fn fetch_window(
     client: &SimpleFINClient,
     pool: &SqlitePool,
     state: &SharedState,
@@ -160,9 +158,61 @@ async fn fetch_range(
             end = win_end,
             "Fetching batch"
         );
-        do_fetch(client, pool, state, win_start, win_end).await?;
+        fetch_window(client, pool, state, win_start, win_end).await?;
     }
     Ok(())
+}
+
+struct SimpleFINFetcher {
+    client: SimpleFINClient,
+}
+
+impl FetcherLoop for SimpleFINFetcher {
+    fn name(&self) -> &'static str {
+        "SimpleFIN"
+    }
+
+    fn last_fetched_db_key(&self) -> &'static str {
+        LAST_FETCHED_KEY
+    }
+
+    fn next_start_db_key(&self) -> Option<&'static str> {
+        Some(NEXT_START_KEY)
+    }
+
+    async fn do_fetch(
+        &self,
+        pool: &SqlitePool,
+        state: &SharedState,
+        from_ts: i64,
+        now: i64,
+    ) -> Result<(), String> {
+        fetch_range(&self.client, pool, state, from_ts, now).await
+    }
+
+    async fn restore_last_fetched(&self, state: &SharedState, ts: i64) {
+        state.write().await.last_fetched = Some(ts);
+    }
+
+    async fn on_success(&self, state: &SharedState, now: i64) {
+        let mut s = state.write().await;
+        s.last_fetched = Some(now);
+        s.fetch_error = None;
+    }
+
+    async fn on_failure(&self, state: &SharedState, error: String) {
+        state.write().await.fetch_error = Some(error);
+    }
+
+    async fn on_startup(&self, pool: &SqlitePool, state: &SharedState) {
+        match load_accounts(pool).await {
+            Ok(accounts) if !accounts.is_empty() => {
+                state.write().await.accounts = accounts;
+            }
+            Ok(_) => {}
+            Err(e) => warn!("Failed to pre-load accounts from DB: {e}"),
+        }
+    }
 }
 
 pub async fn run(
@@ -188,80 +238,14 @@ pub async fn run(
         }
     };
 
-    // Pre-load accounts from DB into the cache so the server can answer immediately.
-    match load_accounts(&pool).await {
-        Ok(accounts) if !accounts.is_empty() => {
-            state.write().await.accounts = accounts;
-        }
-        Ok(_) => {}
-        Err(e) => warn!("Failed to pre-load accounts from DB: {e}"),
-    }
-
-    // Restore persisted fetch state, falling back to defaults for a first run.
-    let last_fetched: Option<i64> = get_config(&pool, LAST_FETCHED_KEY)
-        .await
-        .ok()
-        .flatten()
-        .and_then(|s| s.parse().ok());
-
-    let mut next_start: i64 = get_config(&pool, NEXT_START_KEY)
-        .await
-        .ok()
-        .flatten()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or_else(|| util::now_unix() - (start_date_days_back as i64 * 86_400));
-
-    // Restore last_fetched into the shared cache so /health is accurate immediately.
-    if let Some(ts) = last_fetched {
-        state.write().await.last_fetched = Some(ts);
-    }
-
-    // If the server restarted before the next scheduled fetch, wait out the remainder
-    // of the interval rather than fetching immediately.
-    if let Some(ts) = last_fetched {
-        let elapsed = (util::now_unix() - ts).max(0) as u64;
-        if elapsed < fetch_interval_secs {
-            let wait = fetch_interval_secs - elapsed;
-            info!(
-                wait_secs = wait,
-                "Resuming after restart — waiting until next scheduled fetch"
-            );
-            sleep(Duration::from_secs(wait)).await;
-        }
-    }
-
-    loop {
-        let now = util::now_unix();
-        info!(start = next_start, end = now, "Starting fetch cycle");
-
-        match fetch_range(&client, &pool, &state, next_start, now).await {
-            Ok(()) => {
-                info!("Fetch cycle complete");
-                {
-                    let mut s = state.write().await;
-                    s.last_fetched = Some(now);
-                    s.fetch_error = None;
-                }
-                // Overlap the next window by 24 h to catch late-arriving transactions.
-                next_start = now - 86_400;
-
-                // Persist fetch state so restarts resume from the right point.
-                if let Err(e) = set_config(&pool, LAST_FETCHED_KEY, &now.to_string()).await {
-                    warn!("Failed to persist last_fetched: {e}");
-                }
-                if let Err(e) = set_config(&pool, NEXT_START_KEY, &next_start.to_string()).await {
-                    warn!("Failed to persist next_start: {e}");
-                }
-            }
-            Err(e) => {
-                error!("Fetch cycle failed: {e}");
-                state.write().await.fetch_error = Some(e);
-                // next_start is unchanged so we retry the same window.
-            }
-        }
-
-        sleep(Duration::from_secs(fetch_interval_secs)).await;
-    }
+    run_loop(
+        SimpleFINFetcher { client },
+        pool,
+        state,
+        fetch_interval_secs,
+        start_date_days_back,
+    )
+    .await;
 }
 
 #[cfg(test)]

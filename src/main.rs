@@ -1,6 +1,7 @@
 mod config;
 mod db;
 mod error;
+mod fetcher_loop;
 mod fdx;
 mod lunchflow;
 mod reconciler;
