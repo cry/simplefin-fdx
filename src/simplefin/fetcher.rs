@@ -3,6 +3,7 @@ use sqlx::SqlitePool;
 use tracing::{error, info, warn};
 
 use crate::{
+    error::AppError,
     db::{get_config, set_config},
     fetcher_loop::{FetcherLoop, run_loop},
     simplefin::db::{load_accounts, upsert_account, upsert_holding, upsert_transaction},
@@ -71,7 +72,7 @@ async fn fetch_window(
     state: &SharedState,
     start_ts: i64,
     end_ts: i64,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let params = AccountsRequest {
         start_date: Some(start_ts),
         end_date: Some(end_ts),
@@ -83,7 +84,7 @@ async fn fetch_window(
     let account_set = client
         .get_accounts(params)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| AppError::Internal(e.to_string()))?;
 
     if !account_set.errors.is_empty() {
         for err in &account_set.errors {
@@ -98,14 +99,12 @@ async fn fetch_window(
     for account in &account_set.accounts {
         let cached = sfin_account_to_cached(account);
         upsert_account(pool, &cached)
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
         if let Some(transactions) = &account.transactions {
             for txn in transactions {
                 upsert_transaction(pool, &account.id, txn)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    .await?;
             }
             info!(
                 account_id = %account.id,
@@ -116,8 +115,7 @@ async fn fetch_window(
 
         for holding in &account.holdings {
             upsert_holding(pool, &account.id, holding)
-                .await
-                .map_err(|e| e.to_string())?;
+                .await?;
         }
         if !account.holdings.is_empty() {
             info!(
@@ -147,7 +145,7 @@ async fn fetch_range(
     state: &SharedState,
     start_ts: i64,
     end_ts: i64,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let windows = batch_windows(start_ts, end_ts);
     let total = windows.len();
     for (i, (win_start, win_end)) in windows.into_iter().enumerate() {
@@ -186,7 +184,7 @@ impl FetcherLoop for SimpleFINFetcher {
         state: &SharedState,
         from_ts: i64,
         now: i64,
-    ) -> Result<(), String> {
+    ) -> Result<(), AppError> {
         fetch_range(&self.client, pool, state, from_ts, now).await
     }
 
@@ -200,8 +198,8 @@ impl FetcherLoop for SimpleFINFetcher {
         s.fetch_error = None;
     }
 
-    async fn on_failure(&self, state: &SharedState, error: String) {
-        state.write().await.fetch_error = Some(error);
+    async fn on_failure(&self, state: &SharedState, error: AppError) {
+        state.write().await.fetch_error = Some(error.to_string());
     }
 
     async fn on_startup(&self, pool: &SqlitePool, state: &SharedState) {

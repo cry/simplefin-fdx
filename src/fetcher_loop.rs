@@ -3,7 +3,12 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-use crate::{db::{get_config, set_config}, state::SharedState, util};
+use crate::{
+    db::{get_config, set_config},
+    error::AppError,
+    state::SharedState, 
+    util,
+};
 
 /// Strategy trait implemented by each provider's fetcher.
 ///
@@ -19,7 +24,7 @@ pub trait FetcherLoop {
     /// Config DB key used to persist and restore `last_fetched`.
     fn last_fetched_db_key(&self) -> &'static str;
 
-    /// Perform a single fetch covering the half-open range `[from_ts, now)`.
+    /// Perform a single fetch covering the half-open range `[from_ts, now)`. 
     ///
     /// `state` is provided so implementations that need to update in-memory
     /// account lists mid-fetch (SimpleFIN) can do so.
@@ -29,7 +34,7 @@ pub trait FetcherLoop {
         state: &SharedState,
         from_ts: i64,
         now: i64,
-    ) -> Result<(), String>;
+    ) -> Result<(), AppError>;
 
     /// Write the restored `last_fetched` timestamp into `SharedState` on
     /// startup so `/health` reflects prior state before the first new fetch.
@@ -41,7 +46,7 @@ pub trait FetcherLoop {
 
     /// Mark a failed fetch in `SharedState`: set the provider's `fetch_error`
     /// field to `error`.
-    async fn on_failure(&self, state: &SharedState, error: String);
+    async fn on_failure(&self, state: &SharedState, error: AppError);
 
     // ── Optional (default = no-op / None) ────────────────────────────────────
 

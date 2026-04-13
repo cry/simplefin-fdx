@@ -3,6 +3,7 @@ use sqlx::SqlitePool;
 use tracing::{error, info, warn};
 
 use crate::{
+    error::AppError,
     fetcher_loop::{FetcherLoop, run_loop},
     lunchflow::db as lf_db,
     reconciler,
@@ -19,8 +20,8 @@ async fn lf_fetch(
     pool: &SqlitePool,
     from_ts: i64,
     now: i64,
-) -> Result<(), String> {
-    let accounts = client.list_accounts().await.map_err(|e| e.to_string())?;
+) -> Result<(), AppError> {
+    let accounts = client.list_accounts().await.map_err(|e| AppError::Internal(e.to_string()))?;
 
     let from_date = util::unix_to_date_str(from_ts);
     let to_date = util::unix_to_date_str(now);
@@ -36,8 +37,7 @@ async fn lf_fetch(
         };
 
         lf_db::upsert_lf_account(pool, account, balance.as_ref(), now)
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
         // Only fetch transactions and holdings for active accounts.
         if account.status != AccountStatus::Active {
@@ -63,8 +63,7 @@ async fn lf_fetch(
                     "Fetched lunchflow transactions"
                 );
                 lf_db::upsert_lf_transactions(pool, account.id, &txns)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    .await?;
             }
             Err(e) => {
                 warn!(account_id = account.id, error = %e, "Failed to fetch lunchflow transactions");
@@ -79,8 +78,7 @@ async fn lf_fetch(
                     "Fetched lunchflow holdings"
                 );
                 lf_db::replace_lf_holdings(pool, account.id, &holdings.holdings, now)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    .await?;
             }
             Err(lunchflow::Error::HoldingsNotSupported) => {
                 // Many providers don't support holdings; skip silently.
@@ -116,7 +114,7 @@ impl FetcherLoop for LunchFlowFetcher {
         _state: &SharedState,
         from_ts: i64,
         now: i64,
-    ) -> Result<(), String> {
+    ) -> Result<(), AppError> {
         lf_fetch(&self.client, pool, from_ts, now).await
     }
 
@@ -130,8 +128,8 @@ impl FetcherLoop for LunchFlowFetcher {
         s.lf_fetch_error = None;
     }
 
-    async fn on_failure(&self, state: &SharedState, error: String) {
-        state.write().await.lf_fetch_error = Some(error);
+    async fn on_failure(&self, state: &SharedState, error: AppError) {
+        state.write().await.lf_fetch_error = Some(error.to_string());
     }
 
     async fn post_fetch_success(&self, pool: &SqlitePool, _state: &SharedState) {

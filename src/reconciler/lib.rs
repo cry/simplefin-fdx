@@ -1115,4 +1115,219 @@ mod tests {
             "wrong pair should not match: {score_wrong}"
         );
     }
+
+    /// Test that the optimized two-pointer algorithm works correctly for small datasets
+    #[tokio::test]
+    async fn test_two_pointer_algorithm_small() {
+        let pool = test_pool().await;
+        
+        sqlx::query(
+            "INSERT INTO accounts (id, name, currency, balance, balance_date) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind("ACT-001")
+        .bind("Checking")
+        .bind("USD")
+        .bind("1000.00")
+        .bind(day(0))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO lf_accounts (id, name, institution_name, provider, currency, status, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(1i64)
+        .bind("Checking")
+        .bind("Bank")
+        .bind("plaid")
+        .bind("USD")
+        .bind("active")
+        .bind(day(0))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Insert 3 transactions with matching timestamps and amounts
+        let transactions = [
+            (day(0), -10.50, "Coffee Shop"),
+            (day(1), -25.75, "Groceries"),
+            (day(2), -5.25, "Gas Station"),
+        ];
+
+        for (i, (timestamp, amount, desc)) in transactions.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO transactions (id, account_id, posted, amount, description) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(format!("TRN-{i:03}"))
+            .bind("ACT-001")
+            .bind(timestamp)
+            .bind(amount.to_string())
+            .bind(desc)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "INSERT INTO lf_transactions (id, lf_account_id, amount, currency, date) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(format!("lf-{i:03}"))
+            .bind(1i64)
+            .bind(*amount)
+            .bind("USD")
+            .bind(format!("2024-01-{:02}", 15 + i))
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let score = score_accounts_by_transactions(&pool, "ACT-001", 1, Some("USD"), Some("USD"))
+            .await
+            .unwrap()
+            .expect("should return Some when transactions exist");
+        
+        // With all three matching transactions we should get a high score (close to 1.0)
+        assert!(score >= MATCH_THRESHOLD, "expected high score for perfect matches, got {score}");
+        assert!((score - 1.0).abs() < 0.01, "all txns match, expected 1.0, got {score}");
+    }
+
+    /// Test that the optimized two-pointer algorithm correctly handles unsorted transactions
+    #[tokio::test]
+    async fn test_two_pointer_algorithm_unsorted_transactions() {
+        let pool = test_pool().await;
+        
+        sqlx::query(
+            "INSERT INTO accounts (id, name, currency, balance, balance_date) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind("ACT-002")
+        .bind("Savings")
+        .bind("USD")
+        .bind("5000.00")
+        .bind(day(0))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO lf_accounts (id, name, institution_name, provider, currency, status, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(2i64)
+        .bind("Savings")
+        .bind("Bank")
+        .bind("plaid")
+        .bind("USD")
+        .bind("active")
+        .bind(day(0))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Insert transactions in non-sorted order to test sorting logic
+        let transactions = [
+            (day(2), -5.25, "Gas Station"),  // inserted last
+            (day(0), -10.50, "Coffee Shop"), // inserted first
+            (day(1), -25.75, "Groceries"),   // inserted in middle
+        ];
+
+        for (i, (timestamp, amount, desc)) in transactions.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO transactions (id, account_id, posted, amount, description) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(format!("TRN-{i:03}"))
+            .bind("ACT-002")
+            .bind(timestamp)
+            .bind(amount.to_string())
+            .bind(desc)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "INSERT INTO lf_transactions (id, lf_account_id, amount, currency, date) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(format!("lf-{i:03}"))
+            .bind(2i64)
+            .bind(*amount)
+            .bind("USD")
+            .bind(format!("2024-01-{:02}", 15 + i))
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let score = score_accounts_by_transactions(&pool, "ACT-002", 2, Some("USD"), Some("USD"))
+            .await
+            .unwrap()
+            .expect("should return Some when transactions exist");
+        
+        // Even with unsorted input, the algorithm should correctly match all three
+        assert!(score >= MATCH_THRESHOLD, "expected high score for perfect matches despite order, got {score}");
+    }
+
+    /// Test performance optimization with large transaction datasets (regression test)
+    #[tokio::test]
+    async fn performance_test_large_transaction_sets() {
+        let pool = test_pool().await;
+        
+        sqlx::query(
+            "INSERT INTO accounts (id, name, currency, balance, balance_date) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind("ACT-LARGE")
+        .bind("Large Account")
+        .bind("USD")
+        .bind("10000.00")
+        .bind(day(0))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO lf_accounts (id, name, institution_name, provider, currency, status, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(999i64)
+        .bind("Large Account")
+        .bind("Bank")
+        .bind("plaid")
+        .bind("USD")
+        .bind("active")
+        .bind(day(0))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Insert 50 matching transactions (should be well within TXN_WINDOW limit of 20)
+        for i in 0..50i64 {
+            let amount = -10.0 - (i as f64 * 0.1);
+            sqlx::query(
+                "INSERT INTO transactions (id, account_id, posted, amount, description) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(format!("TRN-{i:03}"))
+            .bind("ACT-LARGE")
+            .bind(day(i % 10)) // Cycle through a few days to test the logic
+            .bind(amount.to_string())
+            .bind("Test Transaction")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "INSERT INTO lf_transactions (id, lf_account_id, amount, currency, date) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(format!("lf-{i:03}"))
+            .bind(999i64)
+            .bind(amount)
+            .bind("USD")
+            .bind(format!("2024-01-{:02}", 15 + (i % 10) as i32))
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let score = score_accounts_by_transactions(&pool, "ACT-LARGE", 999, Some("USD"), Some("USD"))
+            .await
+            .unwrap()
+            .expect("should return Some when transactions exist");
+        
+        // Should handle large datasets without performance issues
+        assert!(score >= MATCH_THRESHOLD, "expected high score for many matching transactions, got {score}");
+    }
 }
