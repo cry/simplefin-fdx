@@ -89,7 +89,48 @@ enum AccountSource {
     Reconciled(String),
 }
 
+fn validate_account_id(id: &str) -> Result<(), AppError> {
+    if id.is_empty() {
+        return Err(AppError::BadRequest("Account ID cannot be empty".into()));
+    }
+
+    let valid_prefix =
+        id.starts_with("SIMPLEFIN-") || id.starts_with("LUNCHFLOW-") || id.starts_with("REC-");
+    if !valid_prefix {
+        return Err(AppError::BadRequest(
+            "Invalid account ID format. Must start with SIMPLEFIN-, LUNCHFLOW-, or REC-".into(),
+        ));
+    }
+
+    if id.starts_with("SIMPLEFIN-") {
+        let rest = &id[10..]; // Length of "SIMPLEFIN-"
+        if rest.is_empty() {
+            return Err(AppError::BadRequest(
+                "SIMPLEFIN account ID cannot be empty".into(),
+            ));
+        }
+    } else if id.starts_with("LUNCHFLOW-") {
+        let rest = &id[10..]; // Length of "LUNCHFLOW-"
+        if rest.is_empty() {
+            return Err(AppError::BadRequest(
+                "LUNCHFLOW account ID cannot be empty".into(),
+            ));
+        }
+    } else if id.starts_with("REC-") {
+        let rest = &id[4..]; // Length of "REC-"
+        if rest.is_empty() {
+            return Err(AppError::BadRequest(
+                "REC account ID cannot be empty".into(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 fn parse_account_source(id: &str) -> Result<AccountSource, AppError> {
+    validate_account_id(id)?;
+
     if let Some(rest) = id.strip_prefix("SIMPLEFIN-") {
         Ok(AccountSource::SimpleFin(rest.to_string()))
     } else if let Some(rest) = id.strip_prefix("LUNCHFLOW-") {
@@ -221,6 +262,7 @@ pub async fn get_account(
     State(app): State<AppState>,
     Path(account_id): Path<String>,
 ) -> Result<Json<FdxAccount>, AppError> {
+    validate_account_id(&account_id)?;
     match parse_account_source(&account_id)? {
         AccountSource::SimpleFin(sfin_id) => {
             let state = app.shared.read().await;
@@ -294,6 +336,15 @@ pub struct TransactionQuery {
     pub end_time: Option<String>,
 }
 
+fn validate_iso8601_timestamp(s: &str) -> Result<(), AppError> {
+    match DateTime::parse_from_rfc3339(s) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(AppError::BadRequest(
+            format!("Invalid timestamp format. Must be RFC 3339: {}", e).into(),
+        )),
+    }
+}
+
 fn parse_iso8601(s: &str) -> Option<i64> {
     DateTime::parse_from_rfc3339(s)
         .ok()
@@ -319,6 +370,15 @@ pub async fn list_transactions(
     Path(account_id): Path<String>,
     Query(query): Query<TransactionQuery>,
 ) -> Result<Json<FdxTransactionList>, AppError> {
+    validate_account_id(&account_id)?;
+
+    if let Some(start_time) = &query.start_time {
+        validate_iso8601_timestamp(start_time)?;
+    }
+    if let Some(end_time) = &query.end_time {
+        validate_iso8601_timestamp(end_time)?;
+    }
+
     let start_ts = query.start_time.as_deref().and_then(parse_iso8601);
     let end_ts = query.end_time.as_deref().and_then(parse_iso8601);
 
@@ -400,6 +460,7 @@ pub async fn list_holdings(
     State(app): State<AppState>,
     Path(account_id): Path<String>,
 ) -> Result<Json<FdxHoldingList>, AppError> {
+    validate_account_id(&account_id)?;
     // Holdings are sourced from SimpleFIN for both SIMPLEFIN- and REC- accounts.
     // LUNCHFLOW- accounts return an empty holdings list (lf holdings are less
     // structured and not mapped to FDX holdings format).

@@ -3,7 +3,12 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-use crate::{db::{get_config, set_config}, state::SharedState, util};
+use crate::{
+    db::{get_config, set_config},
+    error::AppError,
+    state::SharedState,
+    util,
+};
 
 /// Strategy trait implemented by each provider's fetcher.
 ///
@@ -29,7 +34,7 @@ pub trait FetcherLoop {
         state: &SharedState,
         from_ts: i64,
         now: i64,
-    ) -> Result<(), String>;
+    ) -> Result<(), AppError>;
 
     /// Write the restored `last_fetched` timestamp into `SharedState` on
     /// startup so `/health` reflects prior state before the first new fetch.
@@ -41,7 +46,7 @@ pub trait FetcherLoop {
 
     /// Mark a failed fetch in `SharedState`: set the provider's `fetch_error`
     /// field to `error`.
-    async fn on_failure(&self, state: &SharedState, error: String);
+    async fn on_failure(&self, state: &SharedState, error: AppError);
 
     // ── Optional (default = no-op / None) ────────────────────────────────────
 
@@ -153,13 +158,19 @@ pub async fn run_loop<F>(
                 if let Err(e) =
                     set_config(&pool, fetcher.last_fetched_db_key(), &now.to_string()).await
                 {
-                    warn!(fetcher = fetcher.name(), "Failed to persist last_fetched: {e}");
+                    warn!(
+                        fetcher = fetcher.name(),
+                        "Failed to persist last_fetched: {e}"
+                    );
                 }
 
                 // Persist from_ts under the provider-specific next_start key if present.
                 if let Some(key) = fetcher.next_start_db_key() {
                     if let Err(e) = set_config(&pool, key, &from_ts.to_string()).await {
-                        warn!(fetcher = fetcher.name(), "Failed to persist next_start: {e}");
+                        warn!(
+                            fetcher = fetcher.name(),
+                            "Failed to persist next_start: {e}"
+                        );
                     }
                 }
 

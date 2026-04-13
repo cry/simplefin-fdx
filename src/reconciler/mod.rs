@@ -9,8 +9,8 @@ pub use lib::run;
 
 /// Re-export unified transaction types from db module for convenience
 pub use db::{
-    AccountMatchRow, UnifiedTransaction, get_unified_transactions,
-    UserAccountRule, UserReconciliationAction, delete_user_account_rule, get_account_matches,
-    get_lf_name_preferences, get_user_account_rules, insert_user_account_rule,
+    AccountMatchRow, UnifiedTransaction, UserAccountRule, UserReconciliationAction,
+    delete_user_account_rule, get_account_matches, get_lf_name_preferences,
+    get_unified_transactions, get_user_account_rules, insert_user_account_rule,
     upsert_name_preference,
 };
