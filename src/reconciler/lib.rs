@@ -1120,7 +1120,7 @@ mod tests {
     #[tokio::test]
     async fn test_two_pointer_algorithm_small() {
         let pool = test_pool().await;
-        
+
         sqlx::query(
             "INSERT INTO accounts (id, name, currency, balance, balance_date) VALUES (?, ?, ?, ?, ?)",
         )
@@ -1184,17 +1184,23 @@ mod tests {
             .await
             .unwrap()
             .expect("should return Some when transactions exist");
-        
+
         // With all three matching transactions we should get a high score (close to 1.0)
-        assert!(score >= MATCH_THRESHOLD, "expected high score for perfect matches, got {score}");
-        assert!((score - 1.0).abs() < 0.01, "all txns match, expected 1.0, got {score}");
+        assert!(
+            score >= MATCH_THRESHOLD,
+            "expected high score for perfect matches, got {score}"
+        );
+        assert!(
+            (score - 1.0).abs() < 0.01,
+            "all txns match, expected 1.0, got {score}"
+        );
     }
 
     /// Test that the optimized two-pointer algorithm correctly handles unsorted transactions
     #[tokio::test]
     async fn test_two_pointer_algorithm_unsorted_transactions() {
         let pool = test_pool().await;
-        
+
         sqlx::query(
             "INSERT INTO accounts (id, name, currency, balance, balance_date) VALUES (?, ?, ?, ?, ?)",
         )
@@ -1258,16 +1264,19 @@ mod tests {
             .await
             .unwrap()
             .expect("should return Some when transactions exist");
-        
+
         // Even with unsorted input, the algorithm should correctly match all three
-        assert!(score >= MATCH_THRESHOLD, "expected high score for perfect matches despite order, got {score}");
+        assert!(
+            score >= MATCH_THRESHOLD,
+            "expected high score for perfect matches despite order, got {score}"
+        );
     }
 
     /// Test performance optimization with large transaction datasets (regression test)
     #[tokio::test]
     async fn performance_test_large_transaction_sets() {
         let pool = test_pool().await;
-        
+
         sqlx::query(
             "INSERT INTO accounts (id, name, currency, balance, balance_date) VALUES (?, ?, ?, ?, ?)",
         )
@@ -1322,12 +1331,16 @@ mod tests {
             .unwrap();
         }
 
-        let score = score_accounts_by_transactions(&pool, "ACT-LARGE", 999, Some("USD"), Some("USD"))
-            .await
-            .unwrap()
-            .expect("should return Some when transactions exist");
-        
+        let score =
+            score_accounts_by_transactions(&pool, "ACT-LARGE", 999, Some("USD"), Some("USD"))
+                .await
+                .unwrap()
+                .expect("should return Some when transactions exist");
+
         // Should handle large datasets without performance issues
-        assert!(score >= MATCH_THRESHOLD, "expected high score for many matching transactions, got {score}");
+        assert!(
+            score >= MATCH_THRESHOLD,
+            "expected high score for many matching transactions, got {score}"
+        );
     }
 }

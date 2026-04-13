@@ -21,7 +21,10 @@ async fn lf_fetch(
     from_ts: i64,
     now: i64,
 ) -> Result<(), AppError> {
-    let accounts = client.list_accounts().await.map_err(|e| AppError::Internal(e.to_string()))?;
+    let accounts = client
+        .list_accounts()
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
 
     let from_date = util::unix_to_date_str(from_ts);
     let to_date = util::unix_to_date_str(now);
@@ -36,8 +39,7 @@ async fn lf_fetch(
             }
         };
 
-        lf_db::upsert_lf_account(pool, account, balance.as_ref(), now)
-            .await?;
+        lf_db::upsert_lf_account(pool, account, balance.as_ref(), now).await?;
 
         // Only fetch transactions and holdings for active accounts.
         if account.status != AccountStatus::Active {
@@ -62,8 +64,7 @@ async fn lf_fetch(
                     count = txns.len(),
                     "Fetched lunchflow transactions"
                 );
-                lf_db::upsert_lf_transactions(pool, account.id, &txns)
-                    .await?;
+                lf_db::upsert_lf_transactions(pool, account.id, &txns).await?;
             }
             Err(e) => {
                 warn!(account_id = account.id, error = %e, "Failed to fetch lunchflow transactions");
@@ -77,8 +78,7 @@ async fn lf_fetch(
                     count = holdings.holdings.len(),
                     "Fetched lunchflow holdings"
                 );
-                lf_db::replace_lf_holdings(pool, account.id, &holdings.holdings, now)
-                    .await?;
+                lf_db::replace_lf_holdings(pool, account.id, &holdings.holdings, now).await?;
             }
             Err(lunchflow::Error::HoldingsNotSupported) => {
                 // Many providers don't support holdings; skip silently.

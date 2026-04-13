@@ -3,8 +3,8 @@ use sqlx::SqlitePool;
 use tracing::{error, info, warn};
 
 use crate::{
-    error::AppError,
     db::{get_config, set_config},
+    error::AppError,
     fetcher_loop::{FetcherLoop, run_loop},
     simplefin::db::{load_accounts, upsert_account, upsert_holding, upsert_transaction},
     state::{CachedAccount, SharedState},
@@ -98,13 +98,11 @@ async fn fetch_window(
 
     for account in &account_set.accounts {
         let cached = sfin_account_to_cached(account);
-        upsert_account(pool, &cached)
-            .await?;
+        upsert_account(pool, &cached).await?;
 
         if let Some(transactions) = &account.transactions {
             for txn in transactions {
-                upsert_transaction(pool, &account.id, txn)
-                    .await?;
+                upsert_transaction(pool, &account.id, txn).await?;
             }
             info!(
                 account_id = %account.id,
@@ -114,8 +112,7 @@ async fn fetch_window(
         }
 
         for holding in &account.holdings {
-            upsert_holding(pool, &account.id, holding)
-                .await?;
+            upsert_holding(pool, &account.id, holding).await?;
         }
         if !account.holdings.is_empty() {
             info!(

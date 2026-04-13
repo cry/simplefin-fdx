@@ -6,7 +6,7 @@ use tracing::{error, info, warn};
 use crate::{
     db::{get_config, set_config},
     error::AppError,
-    state::SharedState, 
+    state::SharedState,
     util,
 };
 
@@ -24,7 +24,7 @@ pub trait FetcherLoop {
     /// Config DB key used to persist and restore `last_fetched`.
     fn last_fetched_db_key(&self) -> &'static str;
 
-    /// Perform a single fetch covering the half-open range `[from_ts, now)`. 
+    /// Perform a single fetch covering the half-open range `[from_ts, now)`.
     ///
     /// `state` is provided so implementations that need to update in-memory
     /// account lists mid-fetch (SimpleFIN) can do so.
@@ -158,13 +158,19 @@ pub async fn run_loop<F>(
                 if let Err(e) =
                     set_config(&pool, fetcher.last_fetched_db_key(), &now.to_string()).await
                 {
-                    warn!(fetcher = fetcher.name(), "Failed to persist last_fetched: {e}");
+                    warn!(
+                        fetcher = fetcher.name(),
+                        "Failed to persist last_fetched: {e}"
+                    );
                 }
 
                 // Persist from_ts under the provider-specific next_start key if present.
                 if let Some(key) = fetcher.next_start_db_key() {
                     if let Err(e) = set_config(&pool, key, &from_ts.to_string()).await {
-                        warn!(fetcher = fetcher.name(), "Failed to persist next_start: {e}");
+                        warn!(
+                            fetcher = fetcher.name(),
+                            "Failed to persist next_start: {e}"
+                        );
                     }
                 }
 
